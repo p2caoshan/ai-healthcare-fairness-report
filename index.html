@@ -125,7 +125,32 @@
   .track { height: 10px; background: #e6e0d4; }
   .fill { height: 10px; background: var(--teal); }
   .fill.dev { background: var(--accent); }
-  .legend { font-family: "Segoe UI", system-ui, sans-serif; font-size: 12px; color: var(--muted); margin: 4px 0 10px; }
+  .legend, .dag-cap, .key {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    font-size: 12px;
+    color: var(--muted);
+    margin: 4px 0 10px;
+  }
+  .dag {
+    background: var(--card);
+    border: 1px solid var(--line);
+    padding: 12px 12px 4px;
+    margin: 14px 0 6px;
+    overflow-x: auto;
+  }
+  .dag svg { width: 100%; height: auto; display: block; }
+  .dag-cap { font-size: 13px; margin: 0 0 8px; }
+  .key i {
+    font-style: normal;
+    display: inline-block;
+    width: 22px;
+    border-top: 2px solid var(--ink);
+    vertical-align: middle;
+    margin: 0 6px 0 10px;
+  }
+  .key i.opt { border-top-color: var(--accent); }
+  .key i.phys { border-top-color: var(--teal); }
+  .key i.fit { border-top: 2px dashed var(--teal); }
   .sw { display: inline-block; width: 10px; height: 10px; margin-right: 4px; vertical-align: -1px; }
   footer {
     padding: 28px 24px 48px;
@@ -152,13 +177,14 @@
   <div class="wrap">
     <p class="kicker">Aggregate results only · MIMIC-IV and BOLD</p>
     <h1>The pulse oximeter over-reads darker skin. A model catches more of the misses. A fairness constraint did not.</h1>
-    <p class="lede">Paired arterial and pulse-oximetry readings, two credentialed cohorts, and every printed metric from the analysis. No patient rows, identifiers, or raw tables.</p>
+    <p class="lede">Paired arterial and pulse-oximetry readings, two credentialed cohorts, and every printed metric from the analysis. A causal graph then separates that disparity from an effect of skin pigment. No patient rows, identifiers, or raw tables.</p>
     <p class="privacy">MIMIC-IV and BOLD stay on PhysioNet. This page republishes counts, rates, and model scores only. Skin group is a proxy built from recorded race or ethnicity, not a measured pigment. These figures are not a device clearance and not a monitoring policy.</p>
     <nav class="toc">
       <a href="#cohorts">Cohorts</a>
       <a href="#bias">Bias</a>
       <a href="#models">Detection models</a>
       <a href="#fairlearn">Fairlearn</a>
+      <a href="#causal">Causal analysis</a>
       <a href="#agree">What agrees</a>
       <a href="#heart">Heart-disease lab</a>
       <a href="#salk">Salk trial</a>
@@ -175,6 +201,7 @@
         <div class="stat"><b>6% → 44%</b><span>MIMIC Dark-group hypoxemia recall, device versus XGBoost. 108 test events. More than half are still missed.</span></div>
         <div class="stat"><b>23% → 77%</b><span>BOLD Dark-group recall, device versus the first XGBoost. 61 test events. A later refit does not keep this rate.</span></div>
       </div>
+      <p class="dag-cap">These four figures describe the paired samples. The causal section says which of them could be a property of the probe, and which still mix illness, who received a blood gas, and a race label used in place of pigment.</p>
     </section>
 
     <section id="cohorts">
@@ -234,7 +261,7 @@
           <tr class="emph"><td>Device ratio minus arterial ratio</td><td class="num">+0.061</td><td class="num">+0.020</td></tr>
         </tbody>
       </table>
-      <p>Both device ratios pass the four-fifths band. Both sit above the arterial ratio. The oximeter reports the Dark group as safe more evenly than the blood gas does. The distortion is three times larger on MIMIC (0.061 vs 0.020).</p>
+      <p>Both device ratios pass the four-fifths band. Both sit above the arterial ratio. The oximeter reports the Dark group as safe more evenly than the blood gas does. The distortion is three times larger on MIMIC (0.061 vs 0.020). That excess is the descriptive signature of over-reading. It still mixes pigment, the SaO2 distribution, and who enters the file.</p>
     </section>
 
     <section id="models">
@@ -359,14 +386,174 @@
         </tbody>
       </table>
       <p>The section 2 detector finds about 77–83% of hypoxemias. This refit finds about 3–11% and alerts on under 1% of rows. Its MAE is 2.13, against 0.88 before. Constraints then stretch the recall gap. Square loss leaves Other/Unknown recall at zero. Absolute loss lifts Medium to 0.214 and drops Other/Unknown to 0.036.</p>
-      <p>A comment in the notebook says mitigation improved some fairness metrics at an accuracy cost. The tables show the accuracy cost. They do not show a smaller equal-opportunity or average-odds gap. On both cohorts the unconstrained model in this cell wins both error and recall parity.</p>
+      <p>A comment in the notebook says mitigation improved some fairness metrics at an accuracy cost. The tables show the accuracy cost. They do not show a smaller equal-opportunity or average-odds gap. On both cohorts the unconstrained model in this cell wins both error and recall parity. That cell’s MIMIC recalls already sit between 0.448 and 0.477. The detector in the previous section spreads further, and the causal section computes that spread from the printed recalls.</p>
+    </section>
+
+    <section id="causal">
+      <h2>Causal analysis</h2>
+      <p>No new model was fit here. The credentialed rows are not in this site. What follows is a reading of the printed rates, plus the assumptions that would turn a skin-group table into a claim about the probe.</p>
+      <p>The Dark-minus-Light gaps, −1.058 points on MIMIC and −0.630 on BOLD, are differences in the mean of SaO2 − SpO2. They say that, inside these paired rows, the recorded Dark group sits further toward over-reading. A device question asks something else: how SpO2 would move if skin pigment changed and arterial saturation, hemoglobin, and perfusion stayed put. Those questions meet when recorded race behaves like an intervention on pigment. Race in these files is a label, not an assignment. The Dark and Light rows also differ in illness, in labs, and in having had an arterial gas within five minutes of the pulse-ox reading.</p>
+
+      <h3>What shifts the reading</h3>
+      <p class="dag-cap">Assumed directions. Pigment is unmeasured. Recorded race stands in for it. Nothing in this drawing was estimated from the tables.</p>
+      <div class="dag">
+        <svg viewBox="0 0 480 320" role="img" aria-labelledby="dagMeasureTitle dagMeasureDesc">
+          <title id="dagMeasureTitle">Causal graph of pulse-oximeter measurement</title>
+          <desc id="dagMeasureDesc">Structural factors influence recorded race and illness severity. Recorded race influences skin pigment, which influences SpO2 along the optical path. Illness severity influences SaO2. SaO2 and hemoglobin influence SpO2. SaO2 and SpO2 both influence hidden hypoxemia.</desc>
+          <defs>
+            <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#1a1814"/></marker>
+            <marker id="arrA" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#8d2e2e"/></marker>
+            <marker id="arrT" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#1c5c56"/></marker>
+          </defs>
+          <rect x="8" y="8" width="148" height="36" fill="#fffdf8" stroke="#d8d0c2"/>
+          <text x="82" y="31" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Structural factors</text>
+          <rect x="176" y="8" width="128" height="36" fill="#fffdf8" stroke="#d8d0c2"/>
+          <text x="240" y="31" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Recorded race</text>
+          <rect x="324" y="8" width="148" height="36" fill="#fffdf8" stroke="#8d2e2e"/>
+          <text x="398" y="31" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Skin pigment</text>
+          <rect x="8" y="96" width="148" height="36" fill="#fffdf8" stroke="#d8d0c2"/>
+          <text x="82" y="119" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Illness severity</text>
+          <rect x="176" y="88" width="128" height="48" fill="#fffdf8" stroke="#d8d0c2"/>
+          <text x="240" y="107" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#1a1814">Hemoglobin and</text>
+          <text x="240" y="123" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#1a1814">perfusion</text>
+          <rect x="324" y="148" width="148" height="36" fill="#fffdf8" stroke="#8d2e2e"/>
+          <text x="398" y="171" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">SpO2</text>
+          <rect x="8" y="196" width="148" height="36" fill="#fffdf8" stroke="#1c5c56"/>
+          <text x="82" y="219" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">SaO2</text>
+          <rect x="176" y="260" width="148" height="36" fill="#fffdf8" stroke="#d8d0c2"/>
+          <text x="250" y="283" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Hidden hypoxemia</text>
+          <line x1="156" y1="26" x2="172" y2="26" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="304" y1="26" x2="320" y2="26" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="82" y1="44" x2="82" y2="92" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="82" y1="132" x2="82" y2="192" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="398" y1="44" x2="398" y2="144" stroke="#8d2e2e" stroke-width="1.8" marker-end="url(#arrA)"/>
+          <line x1="304" y1="112" x2="340" y2="148" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
+          <path d="M156 214 C 250 214, 280 166, 320 166" fill="none" stroke="#1c5c56" stroke-width="1.8" marker-end="url(#arrT)"/>
+          <line x1="156" y1="220" x2="176" y2="272" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="398" y1="184" x2="320" y2="268" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
+        </svg>
+      </div>
+      <p class="key"><i></i>Assumed cause <i class="opt"></i>Optical path, pigment to SpO2 <i class="phys"></i>SaO2 feeding the reading and the miss</p>
+      <table>
+        <thead><tr><th>Path</th><th>Role</th><th>In the Welch contrast</th></tr></thead>
+        <tbody>
+          <tr class="emph"><td>Race → pigment → SpO2</td><td>The device question. Pigment is unmeasured.</td><td>Open, and mixed with the rows below</td></tr>
+          <tr><td>Structural factors → severity → SaO2 → SpO2</td><td>Back door. A sicker group can show a different SaO2 − SpO2 because error depends on the saturation level.</td><td>Open. Bias is not stratified by SaO2</td></tr>
+          <tr><td>Hemoglobin, dyshemoglobins, perfusion → SpO2</td><td>They change the light signal. Hemoglobin also sits on oxygen content.</td><td>Open. The columns exist and are unused in the bias test</td></tr>
+          <tr><td>SaO2 and SpO2 → hidden hypoxemia</td><td>The miss is computed from both readings.</td><td>A descendant, not an adjustment variable</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Why the cohort itself is a conditioned collider</h3>
+      <p>MIMIC keeps a row when an arterial gas and a charted SpO2 fall within five minutes. BOLD is already a blood-gas cohort. Drawing that gas is a decision. Severity pushes it. So does a pulse-ox reading that looks worse than the patient, and so do care patterns tied to recorded race. Every rate on this page is inside that selected set.</p>
+      <div class="dag">
+        <svg viewBox="0 0 480 210" role="img" aria-labelledby="dagSelectTitle dagSelectDesc">
+          <title id="dagSelectTitle">Selection into the paired oximetry cohort</title>
+          <desc id="dagSelectDesc">Recorded race, illness severity, and the displayed SpO2 all influence the decision to draw an arterial blood gas. The analysis keeps only those rows.</desc>
+          <rect x="8" y="8" width="140" height="36" fill="#fffdf8" stroke="#d8d0c2"/>
+          <text x="78" y="31" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Recorded race</text>
+          <rect x="168" y="8" width="144" height="36" fill="#fffdf8" stroke="#d8d0c2"/>
+          <text x="240" y="31" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Displayed SpO2</text>
+          <rect x="8" y="148" width="140" height="36" fill="#fffdf8" stroke="#d8d0c2"/>
+          <text x="78" y="171" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Illness severity</text>
+          <rect x="168" y="78" width="144" height="44" fill="#fffdf8" stroke="#d8d0c2"/>
+          <text x="240" y="96" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#1a1814">Decision to</text>
+          <text x="240" y="112" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#1a1814">draw a gas</text>
+          <rect x="336" y="72" width="136" height="56" fill="#f8f1e4" stroke="#8a5a12"/>
+          <text x="404" y="94" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#1a1814">Row kept</text>
+          <text x="404" y="110" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#1a1814">in the cohort</text>
+          <text x="404" y="124" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11" fill="#5e584e">conditioned on</text>
+          <line x1="148" y1="26" x2="220" y2="78" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="148" y1="166" x2="200" y2="122" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="240" y1="44" x2="240" y2="74" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="312" y1="100" x2="332" y2="100" stroke="#8a5a12" stroke-width="1.8" marker-end="url(#arr)"/>
+        </svg>
+      </div>
+      <p class="dag-cap">The gold node is a collider. Conditioning on it opens a path between race and severity that belongs to the sampling scheme. The 32,751 MIMIC pairs, and the 30,454 modeling rows, are that node. Saturations that never received a blood gas are unobserved, so this page cannot reweight them.</p>
+
+      <h3>What would isolate the device path</h3>
+      <p>For the arrow from pigment to SpO2, holding the physiology the probe claims to report: compare groups inside slices of SaO2, and hold hemoglobin and the dyshemoglobins when the question is pigment at a fixed blood color. Leave SpO2 on the outcome side. Leave the hidden-hypoxemia label out of the adjustment set, because it is computed from both readings. Leave pO2 out of a measurement-error model. It is drawn with SaO2 and moves with it. Race would still bundle pigment with perfusion, device, and hospital. This site cannot compute that stratified contrast. Until it exists, −1.06 and −0.63 remain descriptive gaps.</p>
+
+      <h3>What the SaO2 model is conditioning on</h3>
+      <p>Arterial pO2 is the most-used split on both cohorts, weight 291 on MIMIC and 237 on BOLD. pO2 and SaO2 are both effects of gas exchange, measured on the same draw. A fit that leans on pO2 reconstructs saturation from the blood gas. That is why BOLD can reach an R² of 0.89, and why the gain is a weak claim about a finger probe.</p>
+      <div class="dag">
+        <svg viewBox="0 -6 500 312" role="img" aria-labelledby="dagModelTitle dagModelDesc">
+          <title id="dagModelTitle">Causal graph of the SaO2 prediction model</title>
+          <desc id="dagModelDesc">Gas exchange influences arterial pO2 and SaO2. Hemoglobin influences SaO2 and SpO2. Skin pigment influences SpO2, and SaO2 influences SpO2. Dashed arrows mark pO2, SpO2, and hemoglobin as model features that produce a predicted SaO2.</desc>
+          <rect x="8" y="78" width="120" height="36" fill="#fffdf8" stroke="#d8d0c2"/>
+          <text x="68" y="101" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Gas exchange</text>
+          <rect x="168" y="8" width="132" height="36" fill="#fffdf8" stroke="#1c5c56"/>
+          <text x="234" y="31" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Arterial pO2</text>
+          <rect x="168" y="150" width="132" height="36" fill="#fffdf8" stroke="#1c5c56"/>
+          <text x="234" y="173" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">SaO2</text>
+          <rect x="8" y="150" width="120" height="36" fill="#fffdf8" stroke="#d8d0c2"/>
+          <text x="68" y="173" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Hemoglobin</text>
+          <rect x="332" y="8" width="140" height="36" fill="#fffdf8" stroke="#8d2e2e"/>
+          <text x="402" y="31" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Skin pigment</text>
+          <rect x="332" y="150" width="140" height="36" fill="#fffdf8" stroke="#8d2e2e"/>
+          <text x="402" y="173" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">SpO2</text>
+          <rect x="168" y="236" width="132" height="40" fill="#fffdf8" stroke="#1c5c56"/>
+          <text x="234" y="260" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Predicted SaO2</text>
+          <line x1="128" y1="88" x2="168" y2="32" stroke="#1c5c56" stroke-width="1.5" marker-end="url(#arrT)"/>
+          <line x1="128" y1="108" x2="164" y2="160" stroke="#1c5c56" stroke-width="1.5" marker-end="url(#arrT)"/>
+          <line x1="128" y1="168" x2="164" y2="168" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
+          <line x1="402" y1="44" x2="402" y2="146" stroke="#8d2e2e" stroke-width="1.8" marker-end="url(#arrA)"/>
+          <line x1="300" y1="168" x2="328" y2="168" stroke="#1c5c56" stroke-width="1.5" marker-end="url(#arrT)"/>
+          <path d="M68 186 V256 H164" fill="none" stroke="#1c5c56" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrT)"/>
+          <path d="M234 8 V-2 H492 V256 H300" fill="none" stroke="#1c5c56" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrT)"/>
+          <path d="M402 186 V256 H300" fill="none" stroke="#1c5c56" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrT)"/>
+        </svg>
+      </div>
+      <p class="key"><i class="phys"></i>Physiology <i class="opt"></i>Pigment into the probe only <i class="fit"></i>Features the fit actually uses</p>
+      <p>The dashed arrows are the model. Pigment changes the probe and is absent from the feature list, except as the group used afterwards for metrics. A bedside correction is the dashed graph that remains after pO2 and the other same-draw labs are removed. That specification is commented in the notebooks and is not the source of the section 2 metrics.</p>
+
+      <h3>Fairness criteria are different targets</h3>
+      <p>Equalizing one column does not equalize the others. The first rows are copied from the notebooks. The section 2 spreads are max recall minus min recall on the printed three-decimal rates.</p>
+      <table>
+        <thead><tr><th>Criterion</th><th>What is set equal</th><th class="num">MIMIC</th><th class="num">BOLD</th></tr></thead>
+        <tbody>
+          <tr><td>Parity of SpO2 ≥ 92</td><td>Share of reassuring pulse-ox readings, Dark / Light</td><td class="num">1.007</td><td class="num">1.015</td></tr>
+          <tr><td>Arterial base rate</td><td>Share with SaO2 ≥ 92, Dark / Light</td><td class="num">0.946</td><td class="num">0.995</td></tr>
+          <tr class="emph"><td>Device minus artery</td><td>How far device parity sits from blood-gas parity</td><td class="num">+0.061</td><td class="num">+0.020</td></tr>
+          <tr><td>Mean bias</td><td>E[SaO2 − SpO2 | Dark] minus Light</td><td class="num">−1.058</td><td class="num">−0.630</td></tr>
+          <tr><td>Equal opportunity, Fairlearn unconstrained</td><td>That cell’s own fit</td><td class="num">0.0284</td><td class="num">0.0744</td></tr>
+          <tr><td>Equal opportunity, absolute-loss search</td><td>Same, after the constraint</td><td class="num">0.0416</td><td class="num">0.1786</td></tr>
+        </tbody>
+      </table>
+      <table>
+        <thead><tr><th>Section 2 detector, from printed recalls</th><th class="num">MIMIC</th><th class="num">BOLD</th></tr></thead>
+        <tbody>
+          <tr><td>Device recall, max − min, four groups</td><td class="num">0.077 − 0.032 = 0.045</td><td class="num">0.393 − 0.214 = 0.179</td></tr>
+          <tr><td>Device, Light minus Dark</td><td class="num">−0.007</td><td class="num">0.007</td></tr>
+          <tr class="emph"><td>XGBoost recall, max − min</td><td class="num">0.481 − 0.351 = 0.130</td><td class="num">0.831 − 0.771 = 0.060</td></tr>
+          <tr><td>XGBoost, Light minus Dark</td><td class="num">0.037</td><td class="num">0.060</td></tr>
+          <tr><td>Recall lift, Dark</td><td class="num">0.388</td><td class="num">0.541</td></tr>
+          <tr><td>Recall lift, Light</td><td class="num">0.432</td><td class="num">0.594</td></tr>
+          <tr><td>Recall lift, Medium</td><td class="num">0.319</td><td class="num">0.393</td></tr>
+          <tr><td>Recall lift, Other/Unknown</td><td class="num">0.360</td><td class="num">0.607</td></tr>
+        </tbody>
+      </table>
+      <p>The device’s Dark–Light recall gap is under a percentage point. Detection is poor in both groups, so equal opportunity is nearly automatic. On MIMIC the device finds 6 of 108 Dark-group hypoxemias and about 40 of 820 Light-group hypoxemias. The section 2 XGBoost raises every group and widens the spread. On MIMIC the floor is Medium, lift 0.319 to a recall of 0.351. On BOLD the floor of the XGBoost recalls is Dark, and the Light–Dark gap grows from 0.007 to 0.060. BOLD’s four-group device spread of 0.179 is the 28-event Medium and Other cells.</p>
+      <p>Fairlearn’s unconstrained MIMIC gap of 0.0284 is a different fit, with recalls near one half in every group. The loss constraint then increases equal opportunity difference on both cohorts. Average odds moves from 0.0273 to 0.0269 on MIMIC under absolute loss, and from 0.0384 to 0.0900 on BOLD. The bound has no term for the optical path, and no term for a different SaO2 base rate. MIMIC’s arterial safe-rate ratio of 0.946 says those base rates already differ.</p>
+      <div class="note"><strong>What was not estimated.</strong> Counterfactual fairness would ask whether the alert is unchanged under an intervention on pigment, with severity held. Path-specific fairness would allow paths that run through true illness and block the path that runs through the probe. <code>BoundedGroupLoss</code> is a regression penalty across groups. Calibration by group was plotted in the notebooks and not printed as a slope, so this page does not score it.</div>
+
+      <h3>The same three conditions as the vaccine trial</h3>
+      <p>The Salk appendix below turns on consistency, positivity, and ignorability. Randomization after consent is what makes the third one plausible. Nothing in the oximetry cohorts plays that role.</p>
+      <table>
+        <thead><tr><th></th><th>Consent, then randomize</th><th>These paired cohorts</th></tr></thead>
+        <tbody>
+          <tr><td>Consistency</td><td>One assigned vaccine, no interference across children.</td><td>One probe on one finger. The condition fails if ward, brand, or protocol differs by race and the label stands in for that bundle.</td></tr>
+          <tr><td>Positivity</td><td>A consenting child can receive either arm.</td><td>Light rows are 65% of the MIMIC test set and 76% of BOLD. Medium hypoxemia counts are 94 and 28.</td></tr>
+          <tr><td>Ignorability</td><td>Assignment does not track risk, inside the consenting group.</td><td>Recorded race is not assigned. No adjustment set was fit for the bias test. Back doors through severity, hemoglobin, perfusion, and selection stay open.</td></tr>
+        </tbody>
+      </table>
     </section>
 
     <section id="agree">
       <h2>What the two cohorts support</h2>
       <div class="grid2">
-        <div class="note"><strong>Shared.</strong> Dark-group SpO2 over-reads relative to Light. A parity check at 92 still passes, and still sits above the arterial safe rate. Linear regression is a poor hypoxemia alarm. XGBoost, when it is the section 2 model, raises Dark-group detection sharply. pO2 dominates the fit. Group-loss search does not make the alarm fairer.</div>
-        <div class="note"><strong>Not shared.</strong> MIMIC’s device error and hypoxemia rate are much higher. Dark versus Medium is significant only on BOLD. Medium is the weak detection group on MIMIC only. BOLD’s strong detector and BOLD’s Fairlearn refit are different trainings, and only one of them works.</div>
+        <div class="note"><strong>Shared.</strong> Dark-group SpO2 over-reads relative to Light, as a difference in means inside the paired sample. A parity check at 92 still passes, and still sits above the arterial safe rate by 0.061 on MIMIC and 0.020 on BOLD. Linear regression is a poor hypoxemia alarm. The section 2 XGBoost raises Dark-group detection sharply and widens the recall spread: 0.045 to 0.130 on MIMIC, with Medium at the floor, and a Light–Dark gap from 0.007 to 0.060 on BOLD. pO2 dominates the fit. Group-loss search does not make the alarm fairer, and it does not target the optical path.</div>
+        <div class="note"><strong>Not shared.</strong> MIMIC’s device error and hypoxemia rate are much higher. Dark versus Medium is significant only on BOLD. Medium is the weak detection group on MIMIC only. BOLD’s strong detector and BOLD’s Fairlearn refit are different trainings, and only one of them works. The Fairlearn gap of 0.0284 on MIMIC is that second training, not the 0.130 spread of the detector.</div>
       </div>
     </section>
 
@@ -425,12 +612,12 @@
       <p>Design only. No records.</p>
       <p>Handing the 1954 polio vaccine to a large group of children and counting cases the next year would not show that the vaccine worked. There is no control series, and nothing separates the vaccine from the other reasons polio rates move. Consistency, positivity, and ignorability are all missing. It is also the wrong first exposure for children when the evidence is still from the laboratory.</p>
       <p>Vaccinating only the children whose parents consent is not randomization. Consent tracks exposure, schooling, and trust in medicine, and those same factors change polio risk. Ignorability fails.</p>
-      <p>Ask permission to be in the study. Then randomize the children who are in it.</p>
+      <p>Ask permission to be in the study. Then randomize the children who are in it. That order is what makes ignorability plausible. The causal section applies the same three conditions to the oximetry cohorts, where no randomization plays that role.</p>
     </section>
 
     <section id="limits">
       <h2>Limits</h2>
-      <p>Race is not melanin, and the two maps are not the same map. One split, no intervals on the fairness metrics, and thin event counts for Medium and for BOLD’s smaller groups. Median fill invents a typical lab for patients who were never measured. The fairness penalty optimizes a regression loss and is scored as a classifier. On BOLD, the model that detects and the model that is constrained are not the same training. Nothing on this page is a reason, by itself, to change a monitor or a treatment threshold.</p>
+      <p>Race stands in for melanin, and the two maps differ. The Welch gaps are differences in means, with the back doors in the causal graph left open. The paired sample conditions on a blood gas having been drawn, which is a collider of severity, the displayed SpO2, and care patterns. One split, no intervals on the fairness metrics, and thin event counts for Medium and for BOLD’s smaller groups. Those thin cells are also where positivity fails for a finer group contrast. Median fill invents a typical lab for patients who were never measured. The fairness penalty optimizes a regression loss and is scored as a classifier. On BOLD, the model that detects and the model that is constrained are different trainings. The section 2 recall spreads are arithmetic on rounded rates. Group calibration was plotted and not printed as a slope. Nothing on this page is a reason, by itself, to change a monitor or a treatment threshold.</p>
       <p class="muted">Sources, not included here: MIMIC-IV v3.1 and the BOLD blood-gas oximetry file on PhysioNet, both credentialed. Heart Failure Prediction Dataset on Kaggle, public. Stack behind the printed MIMIC and BOLD runs: Python 3.10, pandas 2.3, NumPy 2.2, scikit-learn 1.7, XGBoost 3.2, PySpark 4.0. Heart-disease notebook: pandas 2.2.2, NumPy 2.0.2, scikit-learn 1.6.1.</p>
     </section>
   </div>
