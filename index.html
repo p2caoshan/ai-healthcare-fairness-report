@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pulse oximetry fairness — aggregate results</title>
+<meta name="description" content="Shareable aggregate results from a MIMIC-IV and BOLD pulse-oximetry fairness analysis. No patient-level records.">
+<style>
+  :root {
+    --paper: #f3efe6;
+    --ink: #1a1814;
+    --muted: #5e584e;
+    --line: #d8d0c2;
+    --card: #fffdf8;
+    --accent: #8d2e2e;
+    --teal: #1c5c56;
+    --gold: #8a5a12;
+    --chip: #efe8da;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background: var(--paper);
+    font-family: "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: 18px;
+    line-height: 1.55;
+  }
+  a { color: var(--teal); }
+  header.mast {
+    padding: 48px 24px 28px;
+    border-bottom: 1px solid var(--line);
+    background:
+      radial-gradient(900px 240px at 10% -10%, rgba(141,46,46,0.08), transparent 60%),
+      var(--paper);
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+  .kicker {
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    font-size: 12px;
+    color: var(--accent);
+    margin: 0 0 12px;
+  }
+  h1 { font-size: clamp(34px, 5vw, 52px); line-height: 1.05; font-weight: 600; margin: 0 0 14px; }
+  .lede { font-size: 21px; max-width: 46rem; margin: 0; }
+  .privacy {
+    margin-top: 22px;
+    padding: 12px 14px;
+    background: var(--chip);
+    border-left: 3px solid var(--gold);
+    font-family: "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  nav.toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 22px;
+  }
+  nav.toc a {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    font-size: 13px;
+    text-decoration: none;
+    color: var(--ink);
+    background: var(--card);
+    border: 1px solid var(--line);
+    padding: 6px 10px;
+  }
+  main { padding: 10px 24px 64px; }
+  section { padding: 28px 0; border-bottom: 1px solid var(--line); }
+  h2 { font-size: 30px; margin: 0 0 10px; font-weight: 600; }
+  h3 { font-size: 22px; margin: 26px 0 8px; }
+  p { margin: 0 0 12px; }
+  .muted { color: var(--muted); }
+  .grid4, .grid2 { display: grid; gap: 12px; margin: 18px 0; }
+  .grid4 { grid-template-columns: repeat(4, 1fr); }
+  .grid2 { grid-template-columns: 1fr 1fr; }
+  .stat, .note {
+    background: var(--card);
+    border: 1px solid var(--line);
+    padding: 14px 14px 12px;
+  }
+  .stat b {
+    display: block;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    font-size: 28px;
+    font-weight: 650;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+  .stat span, .note {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+  .note { color: var(--ink); font-size: 15px; }
+  .note strong { font-family: "Palatino Linotype", Palatino, Georgia, serif; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    font-family: "Segoe UI", system-ui, sans-serif;
+    font-size: 13.5px;
+    margin: 12px 0 18px;
+  }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-weight: 650; color: var(--muted); font-size: 12px; letter-spacing: 0.02em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.emph td { background: #f8f1e4; }
+  .bars { margin: 8px 0 18px; }
+  .rowlab {
+    display: grid;
+    grid-template-columns: 92px 1fr 52px;
+    gap: 8px;
+    align-items: center;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    font-size: 13px;
+    margin: 5px 0;
+  }
+  .track { height: 10px; background: #e6e0d4; }
+  .fill { height: 10px; background: var(--teal); }
+  .fill.dev { background: var(--accent); }
+  .legend { font-family: "Segoe UI", system-ui, sans-serif; font-size: 12px; color: var(--muted); margin: 4px 0 10px; }
+  .sw { display: inline-block; width: 10px; height: 10px; margin-right: 4px; vertical-align: -1px; }
+  footer {
+    padding: 28px 24px 48px;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  @media (max-width: 800px) {
+    .grid4, .grid2 { grid-template-columns: 1fr 1fr; }
+    body { font-size: 17px; }
+  }
+  @media (max-width: 560px) {
+    .grid4, .grid2 { grid-template-columns: 1fr; }
+  }
+  @media print {
+    nav.toc { display: none; }
+    body { background: white; }
+    .stat, .note, table { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<header class="mast">
+  <div class="wrap">
+    <p class="kicker">Aggregate results only · MIMIC-IV and BOLD</p>
+    <h1>The pulse oximeter over-reads darker skin. A model catches more of the misses. A fairness constraint did not.</h1>
+    <p class="lede">Paired arterial and pulse-oximetry readings, two credentialed cohorts, and every printed metric from the analysis. No patient rows, identifiers, or raw tables.</p>
+    <p class="privacy">MIMIC-IV and BOLD stay on PhysioNet. This page republishes counts, rates, and model scores only. Skin group is a proxy built from recorded race or ethnicity, not a measured pigment. These figures are not a device clearance and not a monitoring policy.</p>
+    <nav class="toc">
+      <a href="#cohorts">Cohorts</a>
+      <a href="#bias">Bias</a>
+      <a href="#models">Detection models</a>
+      <a href="#fairlearn">Fairlearn</a>
+      <a href="#agree">What agrees</a>
+      <a href="#heart">Heart-disease lab</a>
+      <a href="#salk">Salk trial</a>
+      <a href="#limits">Limits</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="wrap">
+    <section id="headlines">
+      <div class="grid4">
+        <div class="stat"><b>−1.06 pts</b><span>MIMIC Dark−Light gap in SaO2−SpO2. Pulse ox sits higher in the Dark group. 95% CI −1.44 to −0.68.</span></div>
+        <div class="stat"><b>−0.63 pts</b><span>Same gap on BOLD. Smaller, and still clear (p &lt; 0.001). Dark vs Medium is also significant here.</span></div>
+        <div class="stat"><b>6% → 44%</b><span>MIMIC Dark-group hypoxemia recall, device versus XGBoost. 108 test events. More than half are still missed.</span></div>
+        <div class="stat"><b>23% → 77%</b><span>BOLD Dark-group recall, device versus the first XGBoost. 61 test events. A later refit does not keep this rate.</span></div>
+      </div>
+    </section>
+
+    <section id="cohorts">
+      <h2>Cohorts and definitions</h2>
+      <p>Each row is a paired SaO2 (arterial blood gas) and SpO2 (pulse oximeter), both restricted to 70–100. On MIMIC-IV v3.1 the pair is built in Spark: lab item 50817 with ICU chart item 220277, same patient and calendar date, within five minutes, and inside the admission window. That join yields 32,751 pairs. The modeling table has 30,454 rows and 44 columns; the notebooks do not print why those two counts differ. Labs are the nearest prior result within 24 hours. ICU vitals are the nearest prior chart value within one hour. BOLD is the released PhysioNet blood-gas table: 49,093 rows and 142 columns.</p>
+      <table>
+        <thead><tr><th></th><th class="num">MIMIC-IV derived</th><th class="num">BOLD</th></tr></thead>
+        <tbody>
+          <tr><td>Modeling rows</td><td class="num">30,454</td><td class="num">49,093</td></tr>
+          <tr><td>Columns</td><td class="num">44</td><td class="num">142</td></tr>
+          <tr><td>Columns with &gt;20% missing</td><td class="num">15</td><td class="num">64</td></tr>
+          <tr><td>Device MAE (SpO2 vs SaO2)</td><td class="num">5.943</td><td class="num">2.437</td></tr>
+          <tr><td>Device RMSE</td><td class="num">9.978</td><td class="num">4.049</td></tr>
+          <tr><td>Test rows (20%, stratified on skin group)</td><td class="num">6,091</td><td class="num">9,819</td></tr>
+          <tr><td>Test rows with SaO2 &lt; 88</td><td class="num">1,283 (21.1%)</td><td class="num">454 (4.6%)</td></tr>
+        </tbody>
+      </table>
+      <p>The MIMIC pairing is a much sicker measurement set: about one test row in five is hypoxemic, against about one in twenty on BOLD. Absolute oximeter error is about twice as large.</p>
+      <h3>Skin groups, and who is in the test set</h3>
+      <p>MIMIC maps free-text race into Light (White, European, Portuguese), Medium (Hispanic, Latino, Asian, Pacific, Indian, South American), Dark (Black, African), and Other/Unknown. BOLD maps race/ethnicity labels: White to Light, Black to Dark, Hispanic/Latino, Asian, American Indian / Alaska Native, and Native Hawaiian / Pacific Islander to Medium, and unknown or multiracial labels to Other/Unknown.</p>
+      <table>
+        <thead><tr><th>Skin group</th><th class="num">MIMIC test n</th><th class="num">Share</th><th class="num">BOLD test n</th><th class="num">Share</th></tr></thead>
+        <tbody>
+          <tr><td>Light</td><td class="num">3,939</td><td class="num">64.7%</td><td class="num">7,476</td><td class="num">76.1%</td></tr>
+          <tr><td>Other/Unknown</td><td class="num">1,272</td><td class="num">20.9%</td><td class="num">713</td><td class="num">7.3%</td></tr>
+          <tr><td>Dark</td><td class="num">463</td><td class="num">7.6%</td><td class="num">957</td><td class="num">9.7%</td></tr>
+          <tr><td>Medium</td><td class="num">417</td><td class="num">6.8%</td><td class="num">673</td><td class="num">6.9%</td></tr>
+        </tbody>
+      </table>
+      <div class="note"><strong>Cutoffs in the code.</strong> Bias is SaO2 minus SpO2. Negative means the pulse oximeter reads higher than the artery. Hypoxemia is SaO2 under 88. The device “detects” it only if SpO2 is also under 88. A false negative is arterial hypoxemia with SpO2 still at 88 or above. A separate disparate-impact check treats SpO2 at or above 92 as the favorable “safe” reading. That is not the same rule as the research definition SaO2 &lt; 88 and SpO2 ≥ 92, which these notebooks do not compute.</div>
+    </section>
+
+    <section id="bias">
+      <h2>Measurement bias</h2>
+      <p>On both files, SpO2 piles up nearer 99–100 than SaO2. Welch tests on SaO2 − SpO2 ask whether that over-read is larger for darker groups. The mean difference below is Dark minus the comparison group.</p>
+      <table>
+        <thead>
+          <tr><th>Cohort</th><th>Contrast</th><th class="num">t</th><th class="num">p</th><th class="num">Dark − other</th><th class="num">95% CI</th></tr>
+        </thead>
+        <tbody>
+          <tr class="emph"><td>MIMIC</td><td>Dark vs Light</td><td class="num">5.488</td><td class="num">&lt;0.001</td><td class="num">−1.058</td><td class="num">−1.436, −0.680</td></tr>
+          <tr><td>MIMIC</td><td>Dark vs Medium</td><td class="num">1.699</td><td class="num">0.089</td><td class="num">−0.450</td><td class="num">−0.968, 0.069</td></tr>
+          <tr class="emph"><td>BOLD</td><td>Dark vs Light</td><td class="num">9.408</td><td class="num">&lt;0.001</td><td class="num">−0.630</td><td class="num">−0.761, −0.499</td></tr>
+          <tr class="emph"><td>BOLD</td><td>Dark vs Medium</td><td class="num">3.192</td><td class="num">0.001</td><td class="num">−0.282</td><td class="num">−0.456, −0.109</td></tr>
+        </tbody>
+      </table>
+      <p>MIMIC’s Dark–Light gap is about one saturation point. Its Dark–Medium gap is not significant at 5%. BOLD’s gaps are smaller and both are significant. The printed t is the comparison group versus Dark, so a positive t and a negative Dark-minus-other difference describe the same shift.</p>
+      <h3>Passing a parity check while still over-calling “safe”</h3>
+      <p>Share of readings at or above 92. The disparate-impact ratio is Dark divided by Light. A ratio between 0.80 and 1.25 is treated as demographic parity.</p>
+      <table>
+        <thead><tr><th></th><th class="num">MIMIC</th><th class="num">BOLD</th></tr></thead>
+        <tbody>
+          <tr><td>SpO2 ≥ 92, Dark</td><td class="num">0.947</td><td class="num">0.939</td></tr>
+          <tr><td>SpO2 ≥ 92, Light</td><td class="num">0.941</td><td class="num">0.925</td></tr>
+          <tr><td>Device ratio</td><td class="num">1.007</td><td class="num">1.015</td></tr>
+          <tr><td>SaO2 ≥ 92, Dark / Light</td><td class="num">0.946</td><td class="num">0.995</td></tr>
+          <tr class="emph"><td>Device ratio minus arterial ratio</td><td class="num">+0.061</td><td class="num">+0.020</td></tr>
+        </tbody>
+      </table>
+      <p>Both device ratios pass the four-fifths band. Both sit above the arterial ratio. The oximeter reports the Dark group as safe more evenly than the blood gas does. The distortion is three times larger on MIMIC (0.061 vs 0.020).</p>
+    </section>
+
+    <section id="models">
+      <h2>Can a model recover the missed hypoxemias?</h2>
+      <p>Linear regression and XGBoost predict SaO2 from SpO2 plus labs and vitals. The split is 80/20, seed 42, stratified on skin group. Medians from the training fold fill missing predictors. An alert fires when predicted SaO2 is under 88.</p>
+      <div class="grid2">
+        <div>
+          <h3>MIMIC recall</h3>
+          <p class="legend"><span class="sw" style="background:#8d2e2e"></span>SpO2 &nbsp; <span class="sw" style="background:#1c5c56"></span>XGBoost</p>
+          <div class="bars" id="mimic-bars"></div>
+        </div>
+        <div>
+          <h3>BOLD recall</h3>
+          <p class="legend"><span class="sw" style="background:#8d2e2e"></span>SpO2 &nbsp; <span class="sw" style="background:#1c5c56"></span>XGBoost, section 2</p>
+          <div class="bars" id="bold-bars"></div>
+        </div>
+      </div>
+
+      <h3>MIMIC fit</h3>
+      <p>30,454 rows. Features are SpO2, gender, age, nine labs, and eight ICU vitals. XGBoost is depth 3, 250 trees, learning rate 0.1.</p>
+      <table>
+        <thead><tr><th>Model</th><th class="num">MAE</th><th class="num">RMSE</th><th class="num">R²</th></tr></thead>
+        <tbody>
+          <tr><td>Linear regression</td><td class="num">6.178</td><td class="num">8.201</td><td class="num">0.031</td></tr>
+          <tr class="emph"><td>XGBoost</td><td class="num">5.051</td><td class="num">7.262</td><td class="num">0.240</td></tr>
+          <tr><td>Raw SpO2 (all rows, not the test split)</td><td class="num">5.943</td><td class="num">9.978</td><td class="num">—</td></tr>
+        </tbody>
+      </table>
+      <table>
+        <thead><tr><th>Group</th><th class="num">n</th><th class="num">Events</th><th class="num">SpO2 recall</th><th class="num">LR recall</th><th class="num">XGB recall</th><th class="num">XGB FNR</th><th class="num">XGB MAE</th><th class="num">XGB R²</th></tr></thead>
+        <tbody>
+          <tr><td>Dark</td><td class="num">463</td><td class="num">108</td><td class="num">0.056</td><td class="num">0.083</td><td class="num">0.444</td><td class="num">0.556</td><td class="num">5.064</td><td class="num">0.256</td></tr>
+          <tr><td>Light</td><td class="num">3,939</td><td class="num">820</td><td class="num">0.049</td><td class="num">0.057</td><td class="num">0.481</td><td class="num">0.520</td><td class="num">5.026</td><td class="num">0.253</td></tr>
+          <tr><td>Medium</td><td class="num">417</td><td class="num">94</td><td class="num">0.032</td><td class="num">0.032</td><td class="num">0.351</td><td class="num">0.649</td><td class="num">5.399</td><td class="num">0.182</td></tr>
+          <tr><td>Other/Unknown</td><td class="num">1,272</td><td class="num">261</td><td class="num">0.077</td><td class="num">0.065</td><td class="num">0.437</td><td class="num">0.563</td><td class="num">5.008</td><td class="num">0.212</td></tr>
+        </tbody>
+      </table>
+      <p>Linear regression does not beat the device on error and barely moves recall. XGBoost’s MAE gain is small (about 5.1 versus a device MAE of 5.9). The detection gain is not: Dark-group recall goes from 6 of 108 events to 48 of 108. Medium stays the weakest group (recall 0.35, R² 0.18). Full linear group errors: Dark MAE 6.368 / R² 0.044, Light 6.193 / 0.032, Medium 6.324 / 0.003, Other 6.016 / 0.028.</p>
+      <p>Split-count importance, high to low: pO2 291, hemoglobin 140, age 120, lactate 108, SpO2 99, heart rate 98, pH 97, hematocrit 92, pCO2 89, respiratory rate 74, temperature 73, systolic pressure 72, carboxyhemoglobin 70, creatinine 54, weight 46, mean pressure 42, height 35, diastolic pressure 34, methemoglobin 15. Gender never enters.</p>
+
+      <h3>BOLD fit</h3>
+      <p>49,093 rows. Features add delta SpO2, sex, and BMI to a similar blood-gas and vital set. This XGBoost is depth 3, 100 trees, learning rate 0.1. It is not the model in the Fairlearn section.</p>
+      <table>
+        <thead><tr><th>Model</th><th class="num">MAE</th><th class="num">RMSE</th><th class="num">R²</th></tr></thead>
+        <tbody>
+          <tr><td>Linear regression</td><td class="num">1.997</td><td class="num">3.129</td><td class="num">0.424</td></tr>
+          <tr class="emph"><td>XGBoost</td><td class="num">0.881</td><td class="num">1.339</td><td class="num">0.895</td></tr>
+          <tr><td>Raw SpO2 (all rows)</td><td class="num">2.437</td><td class="num">4.049</td><td class="num">—</td></tr>
+        </tbody>
+      </table>
+      <table>
+        <thead><tr><th>Group</th><th class="num">n</th><th class="num">Events</th><th class="num">SpO2 recall</th><th class="num">LR recall</th><th class="num">XGB recall</th><th class="num">XGB FNR</th><th class="num">XGB MAE</th><th class="num">XGB R²</th></tr></thead>
+        <tbody>
+          <tr><td>Dark</td><td class="num">957</td><td class="num">61</td><td class="num">0.230</td><td class="num">0.131</td><td class="num">0.771</td><td class="num">0.230</td><td class="num">0.883</td><td class="num">0.917</td></tr>
+          <tr><td>Light</td><td class="num">7,476</td><td class="num">337</td><td class="num">0.237</td><td class="num">0.116</td><td class="num">0.831</td><td class="num">0.169</td><td class="num">0.900</td><td class="num">0.892</td></tr>
+          <tr><td>Medium</td><td class="num">673</td><td class="num">28</td><td class="num">0.393</td><td class="num">0.214</td><td class="num">0.786</td><td class="num">0.214</td><td class="num">0.828</td><td class="num">0.882</td></tr>
+          <tr><td>Other/Unknown</td><td class="num">713</td><td class="num">28</td><td class="num">0.214</td><td class="num">0.107</td><td class="num">0.821</td><td class="num">0.179</td><td class="num">0.737</td><td class="num">0.892</td></tr>
+        </tbody>
+      </table>
+      <p>Linear regression is worse than the device at finding hypoxemia in every group. XGBoost is not: Dark recall goes from 14 of 61 events to 47 of 61. Medium and Other have 28 events each, so those recalls move easily. Linear group errors: Dark MAE 2.229 / R² 0.430, Light 1.986 / 0.424, Medium 1.834 / 0.497, Other 1.958 / 0.342.</p>
+      <p>Split-count importance: pO2 237, pH 148, SpO2 45, pCO2 44, methemoglobin 36, carboxyhemoglobin 34, lactate 23, mean pressure 23, systolic pressure 21, temperature 17, age 13, BMI 12, hematocrit 12, delta SpO2 10, hemoglobin 7, sex 5, diastolic pressure 5, heart rate 3, creatinine 3, respiratory rate 2.</p>
+      <div class="note"><strong>Why the fit looks strong.</strong> Arterial pO2 is the top feature in both cohorts, and it is measured in the same blood gas as SaO2. Part of the R² is that coupling, not a correction you could run from a finger probe and routine vitals. A labs-off specification is commented in the notebooks and was not the run behind these metrics.</div>
+    </section>
+
+    <section id="fairlearn">
+      <h2>Fairlearn did not close the gap</h2>
+      <p>A second XGBoost is fit, then searched with Fairlearn <code>GridSearch</code> (11 grid points) under <code>BoundedGroupLoss</code>. The constraint watches regression loss. The fairness numbers watch a yes/no alert at 88. Those are different jobs.</p>
+      <h3>MIMIC</h3>
+      <p>250 trees, depth 3, learning rate 0.1, row and column subsample 0.8. Square loss and absolute loss are both capped at 2.0. Equal opportunity difference is the max-minus-min recall. Lower is closer.</p>
+      <table>
+        <thead><tr><th>Model</th><th class="num">Eq. opportunity</th><th class="num">Avg. odds</th><th class="num">Theil</th><th class="num">MAE</th><th class="num">RMSE</th></tr></thead>
+        <tbody>
+          <tr class="emph"><td>Unconstrained</td><td class="num">0.0284</td><td class="num">0.0273</td><td class="num">0.1408</td><td class="num">4.991</td><td class="num">7.196</td></tr>
+          <tr><td>Square loss</td><td class="num">0.0388</td><td class="num">0.0257</td><td class="num">0.1508</td><td class="num">5.151</td><td class="num">7.313</td></tr>
+          <tr><td>Absolute loss</td><td class="num">0.0416</td><td class="num">0.0269</td><td class="num">0.1427</td><td class="num">5.039</td><td class="num">7.252</td></tr>
+        </tbody>
+      </table>
+      <table>
+        <thead><tr><th>Model</th><th>Group</th><th class="num">Recall</th><th class="num">FPR</th><th class="num">FNR</th><th class="num">Alert rate</th></tr></thead>
+        <tbody>
+          <tr><td>Unconstrained</td><td>Dark</td><td class="num">0.475</td><td class="num">0.070</td><td class="num">0.526</td><td class="num">0.166</td></tr>
+          <tr><td>Unconstrained</td><td>Light</td><td class="num">0.472</td><td class="num">0.079</td><td class="num">0.528</td><td class="num">0.160</td></tr>
+          <tr><td>Unconstrained</td><td>Medium</td><td class="num">0.448</td><td class="num">0.096</td><td class="num">0.552</td><td class="num">0.175</td></tr>
+          <tr><td>Unconstrained</td><td>Other/Unknown</td><td class="num">0.477</td><td class="num">0.091</td><td class="num">0.523</td><td class="num">0.169</td></tr>
+          <tr><td>Absolute loss</td><td>Dark</td><td class="num">0.445</td><td class="num">0.084</td><td class="num">0.555</td><td class="num">0.169</td></tr>
+          <tr><td>Absolute loss</td><td>Light</td><td class="num">0.464</td><td class="num">0.077</td><td class="num">0.536</td><td class="num">0.157</td></tr>
+          <tr><td>Absolute loss</td><td>Medium</td><td class="num">0.422</td><td class="num">0.072</td><td class="num">0.578</td><td class="num">0.150</td></tr>
+          <tr><td>Absolute loss</td><td>Other/Unknown</td><td class="num">0.458</td><td class="num">0.077</td><td class="num">0.542</td><td class="num">0.154</td></tr>
+          <tr><td>Square loss</td><td>Dark</td><td class="num">0.453</td><td class="num">0.088</td><td class="num">0.547</td><td class="num">0.174</td></tr>
+          <tr><td>Square loss</td><td>Light</td><td class="num">0.426</td><td class="num">0.077</td><td class="num">0.574</td><td class="num">0.149</td></tr>
+          <tr><td>Square loss</td><td>Medium</td><td class="num">0.414</td><td class="num">0.082</td><td class="num">0.586</td><td class="num">0.156</td></tr>
+          <tr><td>Square loss</td><td>Other/Unknown</td><td class="num">0.430</td><td class="num">0.089</td><td class="num">0.570</td><td class="num">0.158</td></tr>
+        </tbody>
+      </table>
+      <p>The unconstrained model already has a recall gap of about three points, and the best error. Both constraints widen that gap and raise MAE. Square loss nudges average odds difference from 0.0273 to 0.0257 only. That is not a fairness win on the alert that matters.</p>
+
+      <h3>BOLD</h3>
+      <p>This cell refits XGBoost with 250 trees and 0.8 subsampling. It does not start from the R² 0.89 model. Square loss is capped at 6.0. Absolute loss is capped at 2.0. Recall collapses before any constraint is applied.</p>
+      <table>
+        <thead><tr><th>Model</th><th class="num">Eq. opportunity</th><th class="num">Avg. odds</th><th class="num">Theil</th><th class="num">MAE</th><th class="num">RMSE</th></tr></thead>
+        <tbody>
+          <tr class="emph"><td>Unconstrained refit</td><td class="num">0.0744</td><td class="num">0.0384</td><td class="num">0.0459</td><td class="num">2.126</td><td class="num">3.396</td></tr>
+          <tr><td>Square loss</td><td class="num">0.1148</td><td class="num">0.0590</td><td class="num">0.0451</td><td class="num">2.222</td><td class="num">3.429</td></tr>
+          <tr><td>Absolute loss</td><td class="num">0.1786</td><td class="num">0.0900</td><td class="num">0.0454</td><td class="num">2.205</td><td class="num">3.472</td></tr>
+        </tbody>
+      </table>
+      <table>
+        <thead><tr><th>Model</th><th>Group</th><th class="num">Recall</th><th class="num">FPR</th><th class="num">FNR</th><th class="num">Alert rate</th></tr></thead>
+        <tbody>
+          <tr><td>Unconstrained</td><td>Dark</td><td class="num">0.033</td><td class="num">0.003</td><td class="num">0.967</td><td class="num">0.005</td></tr>
+          <tr><td>Unconstrained</td><td>Light</td><td class="num">0.068</td><td class="num">0.005</td><td class="num">0.932</td><td class="num">0.008</td></tr>
+          <tr><td>Unconstrained</td><td>Medium</td><td class="num">0.107</td><td class="num">0.005</td><td class="num">0.893</td><td class="num">0.009</td></tr>
+          <tr><td>Unconstrained</td><td>Other/Unknown</td><td class="num">0.071</td><td class="num">0.006</td><td class="num">0.929</td><td class="num">0.008</td></tr>
+          <tr><td>Absolute loss</td><td>Dark</td><td class="num">0.066</td><td class="num">0.007</td><td class="num">0.934</td><td class="num">0.010</td></tr>
+          <tr><td>Absolute loss</td><td>Light</td><td class="num">0.101</td><td class="num">0.008</td><td class="num">0.899</td><td class="num">0.012</td></tr>
+          <tr><td>Absolute loss</td><td>Medium</td><td class="num">0.214</td><td class="num">0.006</td><td class="num">0.786</td><td class="num">0.015</td></tr>
+          <tr><td>Absolute loss</td><td>Other/Unknown</td><td class="num">0.036</td><td class="num">0.007</td><td class="num">0.964</td><td class="num">0.008</td></tr>
+          <tr><td>Square loss</td><td>Dark</td><td class="num">0.115</td><td class="num">0.008</td><td class="num">0.885</td><td class="num">0.015</td></tr>
+          <tr><td>Square loss</td><td>Light</td><td class="num">0.086</td><td class="num">0.005</td><td class="num">0.914</td><td class="num">0.008</td></tr>
+          <tr><td>Square loss</td><td>Medium</td><td class="num">0.107</td><td class="num">0.005</td><td class="num">0.893</td><td class="num">0.009</td></tr>
+          <tr><td>Square loss</td><td>Other/Unknown</td><td class="num">0.000</td><td class="num">0.006</td><td class="num">1.000</td><td class="num">0.006</td></tr>
+        </tbody>
+      </table>
+      <p>The section 2 detector finds about 77–83% of hypoxemias. This refit finds about 3–11% and alerts on under 1% of rows. Its MAE is 2.13, against 0.88 before. Constraints then stretch the recall gap. Square loss leaves Other/Unknown recall at zero. Absolute loss lifts Medium to 0.214 and drops Other/Unknown to 0.036.</p>
+      <p>A comment in the notebook says mitigation improved some fairness metrics at an accuracy cost. The tables show the accuracy cost. They do not show a smaller equal-opportunity or average-odds gap. On both cohorts the unconstrained model in this cell wins both error and recall parity.</p>
+    </section>
+
+    <section id="agree">
+      <h2>What the two cohorts support</h2>
+      <div class="grid2">
+        <div class="note"><strong>Shared.</strong> Dark-group SpO2 over-reads relative to Light. A parity check at 92 still passes, and still sits above the arterial safe rate. Linear regression is a poor hypoxemia alarm. XGBoost, when it is the section 2 model, raises Dark-group detection sharply. pO2 dominates the fit. Group-loss search does not make the alarm fairer.</div>
+        <div class="note"><strong>Not shared.</strong> MIMIC’s device error and hypoxemia rate are much higher. Dark versus Medium is significant only on BOLD. Medium is the weak detection group on MIMIC only. BOLD’s strong detector and BOLD’s Fairlearn refit are different trainings, and only one of them works.</div>
+      </div>
+    </section>
+
+    <section id="heart">
+      <h2>Appendix. Heart-disease metric lab</h2>
+      <p>A separate exercise on the public Heart Failure Prediction table: 918 people, 12 columns, no missing cells, 508 with heart disease (55.3%). Male 725, female 193. Asymptomatic chest pain 496. Normal resting ECG 552. No exercise angina 547, so angina is present in 371. Flat ST slope 460.</p>
+      <table>
+        <thead><tr><th></th><th class="num">Mean</th><th class="num">SD</th><th class="num">Min</th><th class="num">Median</th><th class="num">Max</th></tr></thead>
+        <tbody>
+          <tr><td>Age</td><td class="num">53.51</td><td class="num">9.43</td><td class="num">28</td><td class="num">54</td><td class="num">77</td></tr>
+          <tr><td>Resting BP</td><td class="num">132.40</td><td class="num">18.51</td><td class="num">0</td><td class="num">130</td><td class="num">200</td></tr>
+          <tr><td>Cholesterol</td><td class="num">198.80</td><td class="num">109.38</td><td class="num">0</td><td class="num">223</td><td class="num">603</td></tr>
+          <tr><td>Fasting blood sugar</td><td class="num">0.233</td><td class="num">0.423</td><td class="num">0</td><td class="num">0</td><td class="num">1</td></tr>
+          <tr><td>Max heart rate</td><td class="num">136.81</td><td class="num">25.46</td><td class="num">60</td><td class="num">138</td><td class="num">202</td></tr>
+          <tr><td>Oldpeak</td><td class="num">0.887</td><td class="num">1.067</td><td class="num">−2.6</td><td class="num">0.6</td><td class="num">6.2</td></tr>
+        </tbody>
+      </table>
+      <p>Resting blood pressure and cholesterol both bottom out at 0. Those are not plausible measurements. The zeros act like missing values and feed the cholesterol coefficient below.</p>
+      <p>Split 80/20, seed 42, predictors standardized. Categories were integer-coded before the split, so a multi-level coefficient is not a clinical contrast. Sex is alphabetical, and male is the higher code. Settings come from a 5-fold search on the training set. The AUC column is computed on hard labels, which throws away probability ranking.</p>
+      <table>
+        <thead><tr><th>Model</th><th>Chosen settings</th><th class="num">AUC on labels</th></tr></thead>
+        <tbody>
+          <tr><td>Logistic, age only</td><td>C 0.01, L2</td><td class="num">0.583</td></tr>
+          <tr><td>Logistic, all features</td><td>C 0.1, L2</td><td class="num">0.846</td></tr>
+          <tr><td>Random forest</td><td>100 trees, unlimited depth, min leaf 2, min split 10</td><td class="num">0.897</td></tr>
+          <tr><td>Gradient boosting</td><td>50 trees, learning rate 0.1, depth 5, min leaf 2, min split 2</td><td class="num">0.876</td></tr>
+        </tbody>
+      </table>
+      <p>Resampling the test set 1,000 times, using probabilities from the full logistic model and not refitting it, gives a mean AUC of 0.900 (95% interval 0.852 to 0.943). That interval is uncertainty of one frozen score on a resampled test set.</p>
+      <table>
+        <thead><tr><th>Feature</th><th class="num">Coefficient</th><th>Feature</th><th class="num">Coefficient</th></tr></thead>
+        <tbody>
+          <tr><td>Exercise angina</td><td class="num">+0.582</td><td>Resting ECG</td><td class="num">−0.137</td></tr>
+          <tr><td>Oldpeak</td><td class="num">+0.455</td><td>Max heart rate</td><td class="num">−0.226</td></tr>
+          <tr><td>Sex (male higher)</td><td class="num">+0.439</td><td>Cholesterol</td><td class="num">−0.425</td></tr>
+          <tr><td>Fasting blood sugar</td><td class="num">+0.359</td><td>Chest-pain type, coded</td><td class="num">−0.501</td></tr>
+          <tr><td>Age</td><td class="num">+0.143</td><td>ST slope, coded</td><td class="num">−0.885</td></tr>
+          <tr><td>Resting BP</td><td class="num">+0.058</td><td></td><td class="num"></td></tr>
+        </tbody>
+      </table>
+      <p>Exercise angina is the strongest positive coefficient. ST slope is the strongest negative one, in line with an upsloping code at the top of the alphabetical scale. The negative cholesterol weight should be read next to the zeros in that column.</p>
+      <table>
+        <thead><tr><th>Model</th><th class="num">Precision</th><th class="num">Recall</th><th class="num">F1</th><th class="num">AUC</th><th class="num">Brier on labels</th></tr></thead>
+        <tbody>
+          <tr><td>Logistic, age only</td><td class="num">0.642</td><td class="num">0.738</td><td class="num">0.687</td><td class="num">0.583</td><td class="num">0.391</td></tr>
+          <tr><td>Logistic, all features</td><td class="num">0.898</td><td class="num">0.822</td><td class="num">0.859</td><td class="num">0.846</td><td class="num">0.158</td></tr>
+          <tr class="emph"><td>Random forest</td><td class="num">0.923</td><td class="num">0.897</td><td class="num">0.910</td><td class="num">0.897</td><td class="num">0.103</td></tr>
+          <tr><td>Gradient boosting</td><td class="num">0.912</td><td class="num">0.869</td><td class="num">0.890</td><td class="num">0.876</td><td class="num">0.125</td></tr>
+        </tbody>
+      </table>
+      <p>The five metrics agree: the forest leads, age alone does not. Brier score here is the 0/1 error rate, not a probability score. Calibration plots tell a different story. Both logistic models track the diagonal. The forest and the booster are over-confident, because they were trained to classify rather than to match probabilities. If the number shown to a patient is a risk, calibration outranks the table. Net benefit was plotted, not tabulated: the three full-feature models beat treat-all and treat-none across a wide band of thresholds, roughly 0.1 to 0.9, and their expected cost falls inside that reference triangle. On that decision view the trees outrank logistic regression.</p>
+    </section>
+
+    <section id="salk">
+      <h2>Appendix. Salk vaccine field trial</h2>
+      <p>Design only. No records.</p>
+      <p>Handing the 1954 polio vaccine to a large group of children and counting cases the next year would not show that the vaccine worked. There is no control series, and nothing separates the vaccine from the other reasons polio rates move. Consistency, positivity, and ignorability are all missing. It is also the wrong first exposure for children when the evidence is still from the laboratory.</p>
+      <p>Vaccinating only the children whose parents consent is not randomization. Consent tracks exposure, schooling, and trust in medicine, and those same factors change polio risk. Ignorability fails.</p>
+      <p>Ask permission to be in the study. Then randomize the children who are in it.</p>
+    </section>
+
+    <section id="limits">
+      <h2>Limits</h2>
+      <p>Race is not melanin, and the two maps are not the same map. One split, no intervals on the fairness metrics, and thin event counts for Medium and for BOLD’s smaller groups. Median fill invents a typical lab for patients who were never measured. The fairness penalty optimizes a regression loss and is scored as a classifier. On BOLD, the model that detects and the model that is constrained are not the same training. Nothing on this page is a reason, by itself, to change a monitor or a treatment threshold.</p>
+      <p class="muted">Sources, not included here: MIMIC-IV v3.1 and the BOLD blood-gas oximetry file on PhysioNet, both credentialed. Heart Failure Prediction Dataset on Kaggle, public. Stack behind the printed MIMIC and BOLD runs: Python 3.10, pandas 2.3, NumPy 2.2, scikit-learn 1.7, XGBoost 3.2, PySpark 4.0. Heart-disease notebook: pandas 2.2.2, NumPy 2.0.2, scikit-learn 1.6.1.</p>
+    </section>
+  </div>
+</main>
+<footer>
+  <div class="wrap">Aggregate results for discussion and teaching. Not a medical device evaluation. Patient-level healthcare data is intentionally absent.</div>
+</footer>
+<script>
+function bars(id, rows) {
+  const root = document.getElementById(id);
+  rows.forEach(([label, dev, model]) => {
+    const wrap = document.createElement("div");
+    wrap.innerHTML =
+      `<div class="rowlab"><span>${label}</span><div class="track"><div class="fill dev" style="width:${dev}%"></div></div><span>${dev}%</span></div>` +
+      `<div class="rowlab"><span></span><div class="track"><div class="fill" style="width:${model}%"></div></div><span>${model}%</span></div>`;
+    root.appendChild(wrap);
+  });
+}
+bars("mimic-bars", [["Dark", 6, 44], ["Light", 5, 48], ["Medium", 3, 35], ["Other", 8, 44]]);
+bars("bold-bars", [["Dark", 23, 77], ["Light", 24, 83], ["Medium", 39, 79], ["Other", 21, 82]]);
+</script>
+</body>
+</html>
