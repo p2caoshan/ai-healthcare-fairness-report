@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pulse oximetry fairness — aggregate results</title>
-<meta name="description" content="Shareable aggregate results from a MIMIC-IV and BOLD pulse-oximetry fairness analysis. No patient-level records.">
+<title>Healthcare reports — fairness results, causal methods, code</title>
+<meta name="description" content="Pulse-oximetry fairness results, a standalone note on causal methods in healthcare, and the analysis code. No patient-level records.">
 <style>
   :root {
     --paper: #f3efe6;
@@ -152,6 +152,39 @@
   .key i.phys { border-top-color: var(--teal); }
   .key i.fit { border-top: 2px dashed var(--teal); }
   .sw { display: inline-block; width: 10px; height: 10px; margin-right: 4px; vertical-align: -1px; }
+  .tabs, .filetabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .tabs button, .filetabs button {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    color: var(--ink);
+    background: var(--card);
+    border: 1px solid var(--line);
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+  .tabs button[aria-selected="true"], .filetabs button[aria-selected="true"] {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+  pre.src {
+    background: #1a1814;
+    color: #f3efe6;
+    border: 1px solid var(--line);
+    padding: 14px;
+    overflow: auto;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12.5px;
+    line-height: 1.45;
+    max-height: 70vh;
+    margin: 12px 0 18px;
+  }
+  [data-panel][hidden] { display: none !important; }
   footer {
     padding: 28px 24px 48px;
     font-family: "Segoe UI", system-ui, sans-serif;
@@ -166,7 +199,8 @@
     .grid4, .grid2 { grid-template-columns: 1fr; }
   }
   @media print {
-    nav.toc { display: none; }
+    nav.toc, .tabs, .filetabs { display: none; }
+    [data-panel][hidden] { display: block !important; }
     body { background: white; }
     .stat, .note, table { break-inside: avoid; }
   }
@@ -175,16 +209,25 @@
 <body>
 <header class="mast">
   <div class="wrap">
+    <p class="kicker">Three reports · no patient-level records</p>
+    <div class="tabs" role="tablist" aria-label="Reports">
+      <button type="button" role="tab" data-tab="results" aria-selected="true" aria-controls="panel-results">Fairness results</button>
+      <button type="button" role="tab" data-tab="causal" aria-selected="false" aria-controls="panel-causal">Causal methods</button>
+      <button type="button" role="tab" data-tab="code" aria-selected="false" aria-controls="panel-code">Code</button>
+    </div>
+  </div>
+</header>
+<header class="mast" id="results-mast">
+  <div class="wrap">
     <p class="kicker">Aggregate results only · MIMIC-IV and BOLD</p>
     <h1>The pulse oximeter over-reads darker skin. A model catches more of the misses. A fairness constraint did not.</h1>
-    <p class="lede">Paired arterial and pulse-oximetry readings, two credentialed cohorts, and every printed metric from the analysis. A causal graph then separates that disparity from an effect of skin pigment. No patient rows, identifiers, or raw tables.</p>
+    <p class="lede">Paired arterial and pulse-oximetry readings, two credentialed cohorts, and every printed metric from the analysis. No patient rows, identifiers, or raw tables.</p>
     <p class="privacy">MIMIC-IV and BOLD stay on PhysioNet. This page republishes counts, rates, and model scores only. Skin group is a proxy built from recorded race or ethnicity, not a measured pigment. These figures are not a device clearance and not a monitoring policy.</p>
     <nav class="toc">
       <a href="#cohorts">Cohorts</a>
       <a href="#bias">Bias</a>
       <a href="#models">Detection models</a>
       <a href="#fairlearn">Fairlearn</a>
-      <a href="#causal">Causal analysis</a>
       <a href="#agree">What agrees</a>
       <a href="#heart">Heart-disease lab</a>
       <a href="#salk">Salk trial</a>
@@ -194,6 +237,7 @@
 </header>
 <main>
   <div class="wrap">
+    <div id="panel-results" data-panel="results">
     <section id="headlines">
       <div class="grid4">
         <div class="stat"><b>−1.06 pts</b><span>MIMIC Dark−Light gap in SaO2−SpO2. Pulse ox sits higher in the Dark group. 95% CI −1.44 to −0.68.</span></div>
@@ -201,7 +245,6 @@
         <div class="stat"><b>6% → 44%</b><span>MIMIC Dark-group hypoxemia recall, device versus XGBoost. 108 test events. More than half are still missed.</span></div>
         <div class="stat"><b>23% → 77%</b><span>BOLD Dark-group recall, device versus the first XGBoost. 61 test events. A later refit does not keep this rate.</span></div>
       </div>
-      <p class="dag-cap">These four figures describe the paired samples. The causal section says which of them could be a property of the probe, and which still mix illness, who received a blood gas, and a race label used in place of pigment.</p>
     </section>
 
     <section id="cohorts">
@@ -261,7 +304,7 @@
           <tr class="emph"><td>Device ratio minus arterial ratio</td><td class="num">+0.061</td><td class="num">+0.020</td></tr>
         </tbody>
       </table>
-      <p>Both device ratios pass the four-fifths band. Both sit above the arterial ratio. The oximeter reports the Dark group as safe more evenly than the blood gas does. The distortion is three times larger on MIMIC (0.061 vs 0.020). That excess is the descriptive signature of over-reading. It still mixes pigment, the SaO2 distribution, and who enters the file.</p>
+      <p>Both device ratios pass the four-fifths band. Both sit above the arterial ratio. The oximeter reports the Dark group as safe more evenly than the blood gas does. The distortion is three times larger on MIMIC (0.061 vs 0.020).</p>
     </section>
 
     <section id="models">
@@ -386,173 +429,13 @@
         </tbody>
       </table>
       <p>The section 2 detector finds about 77–83% of hypoxemias. This refit finds about 3–11% and alerts on under 1% of rows. Its MAE is 2.13, against 0.88 before. Constraints then stretch the recall gap. Square loss leaves Other/Unknown recall at zero. Absolute loss lifts Medium to 0.214 and drops Other/Unknown to 0.036.</p>
-      <p>A comment in the notebook says mitigation improved some fairness metrics at an accuracy cost. The tables show the accuracy cost. They do not show a smaller equal-opportunity or average-odds gap. On both cohorts the unconstrained model in this cell wins both error and recall parity. That cell’s MIMIC recalls already sit between 0.448 and 0.477. The detector in the previous section spreads further, and the causal section computes that spread from the printed recalls.</p>
-    </section>
-
-    <section id="causal">
-      <h2>Causal analysis</h2>
-      <p>No new model was fit here. The credentialed rows are not in this site. What follows is a reading of the printed rates, plus the assumptions that would turn a skin-group table into a claim about the probe.</p>
-      <p>The Dark-minus-Light gaps, −1.058 points on MIMIC and −0.630 on BOLD, are differences in the mean of SaO2 − SpO2. They say that, inside these paired rows, the recorded Dark group sits further toward over-reading. A device question asks something else: how SpO2 would move if skin pigment changed and arterial saturation, hemoglobin, and perfusion stayed put. Those questions meet when recorded race behaves like an intervention on pigment. Race in these files is a label, not an assignment. The Dark and Light rows also differ in illness, in labs, and in having had an arterial gas within five minutes of the pulse-ox reading.</p>
-
-      <h3>What shifts the reading</h3>
-      <p class="dag-cap">Assumed directions. Pigment is unmeasured. Recorded race stands in for it. Nothing in this drawing was estimated from the tables.</p>
-      <div class="dag">
-        <svg viewBox="0 0 480 320" role="img" aria-labelledby="dagMeasureTitle dagMeasureDesc">
-          <title id="dagMeasureTitle">Causal graph of pulse-oximeter measurement</title>
-          <desc id="dagMeasureDesc">Structural factors influence recorded race and illness severity. Recorded race influences skin pigment, which influences SpO2 along the optical path. Illness severity influences SaO2. SaO2 and hemoglobin influence SpO2. SaO2 and SpO2 both influence hidden hypoxemia.</desc>
-          <defs>
-            <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#1a1814"/></marker>
-            <marker id="arrA" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#8d2e2e"/></marker>
-            <marker id="arrT" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#1c5c56"/></marker>
-          </defs>
-          <rect x="8" y="8" width="148" height="36" fill="#fffdf8" stroke="#d8d0c2"/>
-          <text x="82" y="31" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Structural factors</text>
-          <rect x="176" y="8" width="128" height="36" fill="#fffdf8" stroke="#d8d0c2"/>
-          <text x="240" y="31" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Recorded race</text>
-          <rect x="324" y="8" width="148" height="36" fill="#fffdf8" stroke="#8d2e2e"/>
-          <text x="398" y="31" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Skin pigment</text>
-          <rect x="8" y="96" width="148" height="36" fill="#fffdf8" stroke="#d8d0c2"/>
-          <text x="82" y="119" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Illness severity</text>
-          <rect x="176" y="88" width="128" height="48" fill="#fffdf8" stroke="#d8d0c2"/>
-          <text x="240" y="107" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#1a1814">Hemoglobin and</text>
-          <text x="240" y="123" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#1a1814">perfusion</text>
-          <rect x="324" y="148" width="148" height="36" fill="#fffdf8" stroke="#8d2e2e"/>
-          <text x="398" y="171" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">SpO2</text>
-          <rect x="8" y="196" width="148" height="36" fill="#fffdf8" stroke="#1c5c56"/>
-          <text x="82" y="219" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">SaO2</text>
-          <rect x="176" y="260" width="148" height="36" fill="#fffdf8" stroke="#d8d0c2"/>
-          <text x="250" y="283" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Hidden hypoxemia</text>
-          <line x1="156" y1="26" x2="172" y2="26" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
-          <line x1="304" y1="26" x2="320" y2="26" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
-          <line x1="82" y1="44" x2="82" y2="92" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
-          <line x1="82" y1="132" x2="82" y2="192" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
-          <line x1="398" y1="44" x2="398" y2="144" stroke="#8d2e2e" stroke-width="1.8" marker-end="url(#arrA)"/>
-          <line x1="304" y1="112" x2="340" y2="148" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
-          <path d="M156 214 C 250 214, 280 166, 320 166" fill="none" stroke="#1c5c56" stroke-width="1.8" marker-end="url(#arrT)"/>
-          <line x1="156" y1="220" x2="176" y2="272" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
-          <line x1="398" y1="184" x2="320" y2="268" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
-        </svg>
-      </div>
-      <p class="key"><i></i>Assumed cause <i class="opt"></i>Optical path, pigment to SpO2 <i class="phys"></i>SaO2 feeding the reading and the miss</p>
-      <table>
-        <thead><tr><th>Path</th><th>Role</th><th>In the Welch contrast</th></tr></thead>
-        <tbody>
-          <tr class="emph"><td>Race → pigment → SpO2</td><td>The device question. Pigment is unmeasured.</td><td>Open, and mixed with the rows below</td></tr>
-          <tr><td>Structural factors → severity → SaO2 → SpO2</td><td>Back door. A sicker group can show a different SaO2 − SpO2 because error depends on the saturation level.</td><td>Open. Bias is not stratified by SaO2</td></tr>
-          <tr><td>Hemoglobin, dyshemoglobins, perfusion → SpO2</td><td>They change the light signal. Hemoglobin also sits on oxygen content.</td><td>Open. The columns exist and are unused in the bias test</td></tr>
-          <tr><td>SaO2 and SpO2 → hidden hypoxemia</td><td>The miss is computed from both readings.</td><td>A descendant, not an adjustment variable</td></tr>
-        </tbody>
-      </table>
-
-      <h3>Why the cohort itself is a conditioned collider</h3>
-      <p>MIMIC keeps a row when an arterial gas and a charted SpO2 fall within five minutes. BOLD is already a blood-gas cohort. Drawing that gas is a decision. Severity pushes it. So does a pulse-ox reading that looks worse than the patient, and so do care patterns tied to recorded race. Every rate on this page is inside that selected set.</p>
-      <div class="dag">
-        <svg viewBox="0 0 480 210" role="img" aria-labelledby="dagSelectTitle dagSelectDesc">
-          <title id="dagSelectTitle">Selection into the paired oximetry cohort</title>
-          <desc id="dagSelectDesc">Recorded race, illness severity, and the displayed SpO2 all influence the decision to draw an arterial blood gas. The analysis keeps only those rows.</desc>
-          <rect x="8" y="8" width="140" height="36" fill="#fffdf8" stroke="#d8d0c2"/>
-          <text x="78" y="31" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Recorded race</text>
-          <rect x="168" y="8" width="144" height="36" fill="#fffdf8" stroke="#d8d0c2"/>
-          <text x="240" y="31" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Displayed SpO2</text>
-          <rect x="8" y="148" width="140" height="36" fill="#fffdf8" stroke="#d8d0c2"/>
-          <text x="78" y="171" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Illness severity</text>
-          <rect x="168" y="78" width="144" height="44" fill="#fffdf8" stroke="#d8d0c2"/>
-          <text x="240" y="96" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#1a1814">Decision to</text>
-          <text x="240" y="112" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#1a1814">draw a gas</text>
-          <rect x="336" y="72" width="136" height="56" fill="#f8f1e4" stroke="#8a5a12"/>
-          <text x="404" y="94" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#1a1814">Row kept</text>
-          <text x="404" y="110" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="12" fill="#1a1814">in the cohort</text>
-          <text x="404" y="124" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="11" fill="#5e584e">conditioned on</text>
-          <line x1="148" y1="26" x2="220" y2="78" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
-          <line x1="148" y1="166" x2="200" y2="122" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
-          <line x1="240" y1="44" x2="240" y2="74" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
-          <line x1="312" y1="100" x2="332" y2="100" stroke="#8a5a12" stroke-width="1.8" marker-end="url(#arr)"/>
-        </svg>
-      </div>
-      <p class="dag-cap">The gold node is a collider. Conditioning on it opens a path between race and severity that belongs to the sampling scheme. The 32,751 MIMIC pairs, and the 30,454 modeling rows, are that node. Saturations that never received a blood gas are unobserved, so this page cannot reweight them.</p>
-
-      <h3>What would isolate the device path</h3>
-      <p>For the arrow from pigment to SpO2, holding the physiology the probe claims to report: compare groups inside slices of SaO2, and hold hemoglobin and the dyshemoglobins when the question is pigment at a fixed blood color. Leave SpO2 on the outcome side. Leave the hidden-hypoxemia label out of the adjustment set, because it is computed from both readings. Leave pO2 out of a measurement-error model. It is drawn with SaO2 and moves with it. Race would still bundle pigment with perfusion, device, and hospital. This site cannot compute that stratified contrast. Until it exists, −1.06 and −0.63 remain descriptive gaps.</p>
-
-      <h3>What the SaO2 model is conditioning on</h3>
-      <p>Arterial pO2 is the most-used split on both cohorts, weight 291 on MIMIC and 237 on BOLD. pO2 and SaO2 are both effects of gas exchange, measured on the same draw. A fit that leans on pO2 reconstructs saturation from the blood gas. That is why BOLD can reach an R² of 0.89, and why the gain is a weak claim about a finger probe.</p>
-      <div class="dag">
-        <svg viewBox="0 -6 500 312" role="img" aria-labelledby="dagModelTitle dagModelDesc">
-          <title id="dagModelTitle">Causal graph of the SaO2 prediction model</title>
-          <desc id="dagModelDesc">Gas exchange influences arterial pO2 and SaO2. Hemoglobin influences SaO2 and SpO2. Skin pigment influences SpO2, and SaO2 influences SpO2. Dashed arrows mark pO2, SpO2, and hemoglobin as model features that produce a predicted SaO2.</desc>
-          <rect x="8" y="78" width="120" height="36" fill="#fffdf8" stroke="#d8d0c2"/>
-          <text x="68" y="101" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Gas exchange</text>
-          <rect x="168" y="8" width="132" height="36" fill="#fffdf8" stroke="#1c5c56"/>
-          <text x="234" y="31" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Arterial pO2</text>
-          <rect x="168" y="150" width="132" height="36" fill="#fffdf8" stroke="#1c5c56"/>
-          <text x="234" y="173" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">SaO2</text>
-          <rect x="8" y="150" width="120" height="36" fill="#fffdf8" stroke="#d8d0c2"/>
-          <text x="68" y="173" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Hemoglobin</text>
-          <rect x="332" y="8" width="140" height="36" fill="#fffdf8" stroke="#8d2e2e"/>
-          <text x="402" y="31" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Skin pigment</text>
-          <rect x="332" y="150" width="140" height="36" fill="#fffdf8" stroke="#8d2e2e"/>
-          <text x="402" y="173" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">SpO2</text>
-          <rect x="168" y="236" width="132" height="40" fill="#fffdf8" stroke="#1c5c56"/>
-          <text x="234" y="260" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Predicted SaO2</text>
-          <line x1="128" y1="88" x2="168" y2="32" stroke="#1c5c56" stroke-width="1.5" marker-end="url(#arrT)"/>
-          <line x1="128" y1="108" x2="164" y2="160" stroke="#1c5c56" stroke-width="1.5" marker-end="url(#arrT)"/>
-          <line x1="128" y1="168" x2="164" y2="168" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arr)"/>
-          <line x1="402" y1="44" x2="402" y2="146" stroke="#8d2e2e" stroke-width="1.8" marker-end="url(#arrA)"/>
-          <line x1="300" y1="168" x2="328" y2="168" stroke="#1c5c56" stroke-width="1.5" marker-end="url(#arrT)"/>
-          <path d="M68 186 V256 H164" fill="none" stroke="#1c5c56" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrT)"/>
-          <path d="M234 8 V-2 H492 V256 H300" fill="none" stroke="#1c5c56" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrT)"/>
-          <path d="M402 186 V256 H300" fill="none" stroke="#1c5c56" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrT)"/>
-        </svg>
-      </div>
-      <p class="key"><i class="phys"></i>Physiology <i class="opt"></i>Pigment into the probe only <i class="fit"></i>Features the fit actually uses</p>
-      <p>The dashed arrows are the model. Pigment changes the probe and is absent from the feature list, except as the group used afterwards for metrics. A bedside correction is the dashed graph that remains after pO2 and the other same-draw labs are removed. That specification is commented in the notebooks and is not the source of the section 2 metrics.</p>
-
-      <h3>Fairness criteria are different targets</h3>
-      <p>Equalizing one column does not equalize the others. The first rows are copied from the notebooks. The section 2 spreads are max recall minus min recall on the printed three-decimal rates.</p>
-      <table>
-        <thead><tr><th>Criterion</th><th>What is set equal</th><th class="num">MIMIC</th><th class="num">BOLD</th></tr></thead>
-        <tbody>
-          <tr><td>Parity of SpO2 ≥ 92</td><td>Share of reassuring pulse-ox readings, Dark / Light</td><td class="num">1.007</td><td class="num">1.015</td></tr>
-          <tr><td>Arterial base rate</td><td>Share with SaO2 ≥ 92, Dark / Light</td><td class="num">0.946</td><td class="num">0.995</td></tr>
-          <tr class="emph"><td>Device minus artery</td><td>How far device parity sits from blood-gas parity</td><td class="num">+0.061</td><td class="num">+0.020</td></tr>
-          <tr><td>Mean bias</td><td>E[SaO2 − SpO2 | Dark] minus Light</td><td class="num">−1.058</td><td class="num">−0.630</td></tr>
-          <tr><td>Equal opportunity, Fairlearn unconstrained</td><td>That cell’s own fit</td><td class="num">0.0284</td><td class="num">0.0744</td></tr>
-          <tr><td>Equal opportunity, absolute-loss search</td><td>Same, after the constraint</td><td class="num">0.0416</td><td class="num">0.1786</td></tr>
-        </tbody>
-      </table>
-      <table>
-        <thead><tr><th>Section 2 detector, from printed recalls</th><th class="num">MIMIC</th><th class="num">BOLD</th></tr></thead>
-        <tbody>
-          <tr><td>Device recall, max − min, four groups</td><td class="num">0.077 − 0.032 = 0.045</td><td class="num">0.393 − 0.214 = 0.179</td></tr>
-          <tr><td>Device, Light minus Dark</td><td class="num">−0.007</td><td class="num">0.007</td></tr>
-          <tr class="emph"><td>XGBoost recall, max − min</td><td class="num">0.481 − 0.351 = 0.130</td><td class="num">0.831 − 0.771 = 0.060</td></tr>
-          <tr><td>XGBoost, Light minus Dark</td><td class="num">0.037</td><td class="num">0.060</td></tr>
-          <tr><td>Recall lift, Dark</td><td class="num">0.388</td><td class="num">0.541</td></tr>
-          <tr><td>Recall lift, Light</td><td class="num">0.432</td><td class="num">0.594</td></tr>
-          <tr><td>Recall lift, Medium</td><td class="num">0.319</td><td class="num">0.393</td></tr>
-          <tr><td>Recall lift, Other/Unknown</td><td class="num">0.360</td><td class="num">0.607</td></tr>
-        </tbody>
-      </table>
-      <p>The device’s Dark–Light recall gap is under a percentage point. Detection is poor in both groups, so equal opportunity is nearly automatic. On MIMIC the device finds 6 of 108 Dark-group hypoxemias and about 40 of 820 Light-group hypoxemias. The section 2 XGBoost raises every group and widens the spread. On MIMIC the floor is Medium, lift 0.319 to a recall of 0.351. On BOLD the floor of the XGBoost recalls is Dark, and the Light–Dark gap grows from 0.007 to 0.060. BOLD’s four-group device spread of 0.179 is the 28-event Medium and Other cells.</p>
-      <p>Fairlearn’s unconstrained MIMIC gap of 0.0284 is a different fit, with recalls near one half in every group. The loss constraint then increases equal opportunity difference on both cohorts. Average odds moves from 0.0273 to 0.0269 on MIMIC under absolute loss, and from 0.0384 to 0.0900 on BOLD. The bound has no term for the optical path, and no term for a different SaO2 base rate. MIMIC’s arterial safe-rate ratio of 0.946 says those base rates already differ.</p>
-      <div class="note"><strong>What was not estimated.</strong> Counterfactual fairness would ask whether the alert is unchanged under an intervention on pigment, with severity held. Path-specific fairness would allow paths that run through true illness and block the path that runs through the probe. <code>BoundedGroupLoss</code> is a regression penalty across groups. Calibration by group was plotted in the notebooks and not printed as a slope, so this page does not score it.</div>
-
-      <h3>The same three conditions as the vaccine trial</h3>
-      <p>The Salk appendix below turns on consistency, positivity, and ignorability. Randomization after consent is what makes the third one plausible. Nothing in the oximetry cohorts plays that role.</p>
-      <table>
-        <thead><tr><th></th><th>Consent, then randomize</th><th>These paired cohorts</th></tr></thead>
-        <tbody>
-          <tr><td>Consistency</td><td>One assigned vaccine, no interference across children.</td><td>One probe on one finger. The condition fails if ward, brand, or protocol differs by race and the label stands in for that bundle.</td></tr>
-          <tr><td>Positivity</td><td>A consenting child can receive either arm.</td><td>Light rows are 65% of the MIMIC test set and 76% of BOLD. Medium hypoxemia counts are 94 and 28.</td></tr>
-          <tr><td>Ignorability</td><td>Assignment does not track risk, inside the consenting group.</td><td>Recorded race is not assigned. No adjustment set was fit for the bias test. Back doors through severity, hemoglobin, perfusion, and selection stay open.</td></tr>
-        </tbody>
-      </table>
+      <p>A comment in the notebook says mitigation improved some fairness metrics at an accuracy cost. The tables show the accuracy cost. They do not show a smaller equal-opportunity or average-odds gap. On both cohorts the unconstrained model in this cell wins both error and recall parity. That cell’s MIMIC recalls already sit between 0.448 and 0.477. The section 2 detector, the one that raises recall, has a wider spread.</p>
     </section>
 
     <section id="agree">
       <h2>What the two cohorts support</h2>
       <div class="grid2">
-        <div class="note"><strong>Shared.</strong> Dark-group SpO2 over-reads relative to Light, as a difference in means inside the paired sample. A parity check at 92 still passes, and still sits above the arterial safe rate by 0.061 on MIMIC and 0.020 on BOLD. Linear regression is a poor hypoxemia alarm. The section 2 XGBoost raises Dark-group detection sharply and widens the recall spread: 0.045 to 0.130 on MIMIC, with Medium at the floor, and a Light–Dark gap from 0.007 to 0.060 on BOLD. pO2 dominates the fit. Group-loss search does not make the alarm fairer, and it does not target the optical path.</div>
+        <div class="note"><strong>Shared.</strong> Dark-group SpO2 over-reads relative to Light, as a difference in means inside the paired sample. A parity check at 92 still passes, and still sits above the arterial safe rate by 0.061 on MIMIC and 0.020 on BOLD. Linear regression is a poor hypoxemia alarm. The section 2 XGBoost raises Dark-group detection sharply and widens the recall spread: 0.045 to 0.130 on MIMIC, with Medium at the floor, and a Light–Dark gap from 0.007 to 0.060 on BOLD. pO2 dominates the fit. Group-loss search does not make the alarm fairer,</div>
         <div class="note"><strong>Not shared.</strong> MIMIC’s device error and hypoxemia rate are much higher. Dark versus Medium is significant only on BOLD. Medium is the weak detection group on MIMIC only. BOLD’s strong detector and BOLD’s Fairlearn refit are different trainings, and only one of them works. The Fairlearn gap of 0.0284 on MIMIC is that second training, not the 0.130 spread of the detector.</div>
       </div>
     </section>
@@ -612,18 +495,1978 @@
       <p>Design only. No records.</p>
       <p>Handing the 1954 polio vaccine to a large group of children and counting cases the next year would not show that the vaccine worked. There is no control series, and nothing separates the vaccine from the other reasons polio rates move. Consistency, positivity, and ignorability are all missing. It is also the wrong first exposure for children when the evidence is still from the laboratory.</p>
       <p>Vaccinating only the children whose parents consent is not randomization. Consent tracks exposure, schooling, and trust in medicine, and those same factors change polio risk. Ignorability fails.</p>
-      <p>Ask permission to be in the study. Then randomize the children who are in it. That order is what makes ignorability plausible. The causal section applies the same three conditions to the oximetry cohorts, where no randomization plays that role.</p>
+      <p>Ask permission to be in the study. Then randomize the children who are in it.</p>
     </section>
 
     <section id="limits">
       <h2>Limits</h2>
-      <p>Race stands in for melanin, and the two maps differ. The Welch gaps are differences in means, with the back doors in the causal graph left open. The paired sample conditions on a blood gas having been drawn, which is a collider of severity, the displayed SpO2, and care patterns. One split, no intervals on the fairness metrics, and thin event counts for Medium and for BOLD’s smaller groups. Those thin cells are also where positivity fails for a finer group contrast. Median fill invents a typical lab for patients who were never measured. The fairness penalty optimizes a regression loss and is scored as a classifier. On BOLD, the model that detects and the model that is constrained are different trainings. The section 2 recall spreads are arithmetic on rounded rates. Group calibration was plotted and not printed as a slope. Nothing on this page is a reason, by itself, to change a monitor or a treatment threshold.</p>
+      <p>Race is a proxy for melanin, and the two maps differ. One split, no intervals on the fairness metrics, and thin event counts for Medium and for BOLD’s smaller groups. Median fill invents a typical lab for patients who were never measured. The fairness penalty optimizes a regression loss and is scored as a classifier. On BOLD, the model that detects and the model that is constrained are different trainings. The section 2 recall spreads are arithmetic on rounded rates. Group calibration was plotted and not printed as a slope. Nothing on this page is a reason, by itself, to change a monitor or a treatment threshold.</p>
       <p class="muted">Sources, not included here: MIMIC-IV v3.1 and the BOLD blood-gas oximetry file on PhysioNet, both credentialed. Heart Failure Prediction Dataset on Kaggle, public. Stack behind the printed MIMIC and BOLD runs: Python 3.10, pandas 2.3, NumPy 2.2, scikit-learn 1.7, XGBoost 3.2, PySpark 4.0. Heart-disease notebook: pandas 2.2.2, NumPy 2.0.2, scikit-learn 1.6.1.</p>
     </section>
+    </div>
+<div id="panel-causal" data-panel="causal" hidden>
+      <p class="kicker">Standalone methods note</p>
+      <h1>Causal analysis in healthcare</h1>
+      <p class="lede">How treatment effects are identified from trials, claims, and electronic records. This note does not use the pulse-oximetry cohorts, the heart-disease table, or any patient file.</p>
+      <p class="privacy">The estimators in the code tab draw their own rows in memory. Nothing below is a result from MIMIC, BOLD, or a hospital extract.</p>
+
+      <section>
+        <h2>What a healthcare analysis is usually asked to estimate</h2>
+        <p>A causal question names a treatment strategy, the people it would cover, a start of follow-up, and an outcome. The number people want is a contrast between two strategies on that same group: the outcome if everyone followed one strategy, minus the outcome if everyone followed the other. An association between “was treated” and “later had the event” is a different number. Treated patients are often sicker, older, or already on a path that changes the outcome.</p>
+        <p>Routine practice data can still support that contrast when the design copies a trial that could have been run. The methods below are the ones regulators, health-technology groups, and clinical researchers use for that job. They differ in which door they close, and in which door they leave open.</p>
+      </section>
+
+      <section>
+        <h2>A trial is the reference design</h2>
+        <p>Random assignment makes the treated and untreated groups exchangeable at the start. Consistency says the outcome under the assigned strategy is the outcome we record. Positivity says every eligible person could have received either strategy. Ignorability is the claim that assignment does not track prognosis. A randomized trial is built so that third claim is plausible.</p>
+        <p>The 1954 polio field trial, summarized in the fairness tab, is the clean version of this design: permission first, then randomization among the children who are in the study. Consent-only assignment does not supply ignorability. The same three conditions reappear, under other names, in every method below.</p>
+      </section>
+
+      <section>
+        <h2>Target trial emulation</h2>
+        <p>When a trial is absent, the working practice is to write the trial protocol anyway and then emulate it in claims or an electronic record. Miguel Hernán and James Robins set out that two-step form: specify eligibility, treatment strategies, assignment, follow-up, the outcome, and the causal contrast; then line each piece up with the observational data. Time zero is the moment a person meets eligibility and a strategy is assigned. Starting the clock later, or letting post-treatment information into the eligibility rule, builds in immortal time and selection.</p>
+        <p>The FDA Sentinel Innovation Center’s PRINCIPLED guide (Rothman and colleagues, 2024) walks through the same sequence for drug effects in routine-care data: a protocol, an explicit emulation, confounders tied to treatment choice and to risk, and an estimator matched to whether treatment is a one-time start or a strategy that continues. Subgroup contrasts are effect-modification questions, specified in advance. A multi-database safety study of infliximab and non-infectious uveitis used the same frame, with the protocol and the analysis code posted separately from the patient tables.</p>
+      </section>
+
+      <section>
+        <h2>One decision at baseline: propensity scores</h2>
+        <p>If the strategy is chosen once, at baseline, measured confounding can be handled by a model for who gets treated. The propensity score is the probability of treatment given the measured covariates (Rosenbaum and Rubin, 1983). Healthcare studies use it in four ways.</p>
+        <table>
+          <thead><tr><th>Use</th><th>What is compared</th><th>What is discarded or inflated</th></tr></thead>
+          <tbody>
+            <tr><td>Matching</td><td>Treated people and untreated people with a similar score</td><td>People who find no pair. The remaining group is whoever could be matched, which is often closer to the treated population than to everyone eligible.</td></tr>
+            <tr><td>Stratification</td><td>Outcomes inside bands of the score</td><td>Little. Residual imbalance can remain inside a wide band.</td></tr>
+            <tr><td>Inverse-probability weighting</td><td>A reweighted sample that resembles the whole eligible group, or the treated group, depending on the weight</td><td>Nobody is dropped. A person with a probability near 0 or 1 receives a huge weight.</td></tr>
+            <tr><td>Overlap weighting</td><td>The people for whom either strategy was plausible</td><td>The tails, on purpose. The target population is defined by the overlap, not chosen in advance.</td></tr>
+          </tbody>
+        </table>
+        <p>A Clinical Infectious Diseases commentary on COVID-19 therapeutics makes the population point explicit: matching and overlap weights do not automatically estimate the effect in a population you named beforehand. Positivity is the practical check. If one group has no one with a given history, that history cannot be balanced. Balance tables after weighting, and the distribution of weights, are part of the result. A large-scale propensity model, as in the uveitis safety study, puts diagnoses, drugs, procedures, and labs into a regularized logistic regression and then matches on the logit of the score with a caliper.</p>
+        <p>Outcome regression that includes the same covariates is the other baseline tool. Doubly robust estimation, including augmented inverse-probability weighting, stays consistent if either the treatment model or the outcome model is right. It does not survive both models being wrong, and it does not repair a confounder that was never measured.</p>
+      </section>
+
+      <section>
+        <h2>Treatment that continues, and confounders that react</h2>
+        <p>Many clinical strategies are not a single start. A patient begins a drug, the response is observed, and the next visit changes the dose or stops the drug. The symptom that prompts the change is both a consequence of earlier treatment and a cause of later treatment and of the outcome. That is treatment-confounder feedback.</p>
+        <p>Putting every covariate, past and present, into one outcome regression blocks part of the treatment’s own path. The g-methods were built for this. Inverse-probability weighting of a marginal structural model reweights each visit by the probability of the treatment actually received given the past. The parametric g-formula fits the pieces of the data-generating process and then simulates the outcome under a strategy you impose, such as “always treat” against “never treat.” G-estimation of a structural nested model estimates the treatment effect at each visit without adjusting away the effect of earlier treatment. A 2024 Lancet Psychiatry paper on target trials in psychiatry states the split cleanly: baseline propensity methods are enough for two one-time strategies; g-methods are the ones to use when treatment and confounders keep updating each other.</p>
+        <p>The code tab includes a point-treatment g-formula and a two-period version. The two-period function is the smallest case with feedback: baseline state affects the first treatment, the first treatment affects the later state, and the later state affects the second treatment and the outcome. It is a synthetic check of the estimator, not a patient series.</p>
+      </section>
+
+      <section>
+        <h2>An instrument in place of assignment</h2>
+        <p>When important confounders are unmeasured, a variable that shifts treatment and has no other route to the outcome can stand in for randomization. An instrument has three properties: it predicts treatment, it shares no uncontrolled cause with the outcome, and it affects the outcome only through treatment. The exclusion restriction is the third. Two-stage least squares regresses treatment on the instrument, then regresses the outcome on that fitted treatment. The contrast is the effect among people whose treatment the instrument actually moves.</p>
+        <p>In electronic records the instrument is often a preference, a distance, a center’s policy, or a staffing shock that changes what is offered without changing the patient’s prognosis directly. Weak instruments move the estimate a long way for a little shift in treatment, and they do it with a wide interval. Mendelian randomization uses germline variants as the instrument for an exposure such as a biomarker or a drug target. Relevance, independence, and no horizontal pleiotropy are the same three properties in genetic language. Family designs, two-sample summary data, and methods for many weak variants are now standard around UK Biobank-scale studies. Pleiotropy is the usual way the exclusion restriction fails.</p>
+      </section>
+
+      <section>
+        <h2>A policy with a start date</h2>
+        <p>Interrupted time series is the design used when a guideline, a law, or a formulary change begins on a known day and the outcome is a rate over time. Segmented regression gives the series a level before the change, a slope before the change, a level shift at the change, and a slope shift after it. Bernal, Cummins, and Gasparrini’s tutorial is the usual reference. The impact model — a step, a slope change, or both — has to be chosen before looking at the result. Seasonality, autocorrelation, and a second event on the same day are the ordinary threats. A control series that was not subject to the policy is the check: a shift that appears in both series is a poor candidate for the policy effect.</p>
+        <p>Difference-in-differences compares the change in a group that received a policy with the change in a group that did not. It removes time-fixed differences under a parallel-trends assumption. It fits a formulary or a regional rule more often than it fits a drug chosen patient by patient, because individual treatment rarely creates two groups whose outcomes would have moved together.</p>
+      </section>
+
+      <section>
+        <h2>A graph decides the adjustment set</h2>
+        <p class="dag-cap">A generic treatment question. Arrows are assumptions the analyst is willing to defend. They are not estimated from a dataset on this site.</p>
+        <div class="dag">
+          <svg viewBox="0 0 480 230" role="img" aria-labelledby="dagGenericTitle dagGenericDesc">
+            <title id="dagGenericTitle">Causal graph for a point treatment</title>
+            <desc id="dagGenericDesc">An instrument influences treatment. Measured and unmeasured confounders influence both treatment and the outcome. Treatment influences the outcome. The unmeasured arrows are the back door that a propensity score leaves open.</desc>
+            <defs>
+              <marker id="arrC" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#1a1814"/></marker>
+              <marker id="arrU" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#8a5a12"/></marker>
+              <marker id="arrZ" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#1c5c56"/></marker>
+              <marker id="arrR" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#8d2e2e"/></marker>
+            </defs>
+            <rect x="168" y="8" width="168" height="36" fill="#fffdf8" stroke="#d8d0c2"/>
+            <text x="252" y="31" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Measured confounders</text>
+            <rect x="8" y="88" width="120" height="36" fill="#fffdf8" stroke="#1c5c56"/>
+            <text x="68" y="111" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Instrument</text>
+            <rect x="176" y="88" width="128" height="36" fill="#fffdf8" stroke="#8d2e2e"/>
+            <text x="240" y="111" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Treatment</text>
+            <rect x="348" y="88" width="120" height="36" fill="#fffdf8" stroke="#d8d0c2"/>
+            <text x="408" y="111" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Outcome</text>
+            <rect x="168" y="176" width="168" height="36" fill="#f8f1e4" stroke="#8a5a12"/>
+            <text x="252" y="199" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="13" fill="#1a1814">Unmeasured factors</text>
+            <line x1="230" y1="44" x2="220" y2="84" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arrC)"/>
+            <path d="M320 26 C 390 26, 420 70, 420 84" fill="none" stroke="#1a1814" stroke-width="1.5" marker-end="url(#arrC)"/>
+            <line x1="128" y1="106" x2="172" y2="106" stroke="#1c5c56" stroke-width="1.8" marker-end="url(#arrZ)"/>
+            <line x1="304" y1="106" x2="344" y2="106" stroke="#8d2e2e" stroke-width="1.8" marker-end="url(#arrR)"/>
+            <line x1="230" y1="176" x2="230" y2="124" stroke="#8a5a12" stroke-width="1.6" marker-end="url(#arrU)"/>
+            <path d="M320 194 C 410 200, 460 160, 430 124" fill="none" stroke="#8a5a12" stroke-width="1.6" marker-end="url(#arrU)"/>
+          </svg>
+        </div>
+        <p class="key"><i></i>Measured path <i class="opt"></i>Treatment to outcome <i class="phys"></i>Instrument <i style="border-top-color:#8a5a12"></i>Unmeasured back door</p>
+        <p>The BMJ guide for clinical researchers treats a directed acyclic graph as the way to name a minimally sufficient adjustment set: the smallest measured set that blocks every back-door path from treatment to outcome. Conditioning means regression, matching, stratification, or weighting. A mediator sits on the treatment’s own path; conditioning on it removes part of the effect you meant to keep. A collider is a common effect; conditioning on it opens a path that was closed. Selection into a study because of the treatment and because of the outcome is the usual collider in a chart review. An unmeasured confounder, drawn in gold, is the path a propensity score does not close. An instrument is useful only when the teal arrow is its only route to the outcome.</p>
+      </section>
+
+      <section>
+        <h2>Checks that belong with the estimate</h2>
+        <table>
+          <thead><tr><th>Check</th><th>What it is for</th></tr></thead>
+          <tbody>
+            <tr><td>Covariate balance</td><td>After matching or weighting, measured confounders should look similar across strategies. A standardized difference that remains large is an open back door you claimed to close.</td></tr>
+            <tr><td>Positivity and weights</td><td>Probabilities near zero produce weights that are a handful of people. Trimming and overlap weights change the population. Say which population remains.</td></tr>
+            <tr><td>Negative controls</td><td>An outcome the treatment cannot affect, or an exposure that cannot affect the real outcome, should show a null contrast. A signal there is residual bias.</td></tr>
+            <tr><td>Time zero</td><td>Eligibility, assignment, and the start of follow-up are the same moment. Information from after that moment does not decide who enters.</td></tr>
+            <tr><td>Specification</td><td>For doubly robust estimators, report both models. For a time series, report the impact model and how autocorrelation and season were handled.</td></tr>
+          </tbody>
+        </table>
+        <p>The uveitis multi-database study is a useful picture of this discipline: an active-comparator new-user design, a posted protocol, a posted code path, propensity-score balance, and a result that is read across databases rather than from a single extract.</p>
+      </section>
+
+      <section>
+        <h2>Which tool for which question</h2>
+        <table>
+          <thead><tr><th>Situation</th><th>Tool in current practice</th></tr></thead>
+          <tbody>
+            <tr><td>The strategy can be assigned, and people will be followed for it</td><td>Randomize after eligibility and consent</td></tr>
+            <tr><td>A trial was not run, and the data are claims or an electronic record</td><td>Write the target trial, then emulate it</td></tr>
+            <tr><td>One treatment decision, confounders measured at baseline</td><td>Propensity score or outcome regression; doubly robust if you fit both</td></tr>
+            <tr><td>Treatment is revisited, and the clinical course affects the next decision</td><td>Marginal structural model, g-formula, or g-estimation</td></tr>
+            <tr><td>Important causes of treatment and outcome were never recorded</td><td>Instrumental variable, or Mendelian randomization when the instrument is genetic</td></tr>
+            <tr><td>A rule, law, or formulary changed on a known date</td><td>Interrupted time series, with a control series when one exists</td></tr>
+            <tr><td>You are still choosing what to adjust for</td><td>Draw the graph first. Then pick the adjustment set off the graph.</td></tr>
+          </tbody>
+        </table>
+        <p>The code tab holds reference implementations of inverse-probability weighting, augmented inverse-probability weighting, the point-treatment g-formula, a two-period g-formula, two-stage least squares, the Wald ratio used in Mendelian randomization, and segmented regression. Each one is fed by a random-number generator. There is no data file beside them.</p>
+      </section>
+
+      <section>
+        <h2>Sources</h2>
+        <ul>
+          <li>Hernán MA, Robins JM. Using big data to emulate a target trial when a randomized trial is not available. American Journal of Epidemiology. 2016.</li>
+          <li>Rothman KJ and colleagues. PRINCIPLED: process guide for inferential studies using healthcare data from routine clinical practice. FDA Sentinel Innovation Center. 2024.</li>
+          <li>Rosenbaum PR, Rubin DB. The central role of the propensity score in observational studies for causal effects. Biometrika. 1983.</li>
+          <li>Propensity-score commentary on COVID-19 therapeutics. Clinical Infectious Diseases. 2024.</li>
+          <li>Target trial emulation in psychiatry. The Lancet Psychiatry. 2024.</li>
+          <li>Bernal JL, Cummins S, Gasparrini A. Interrupted time series regression for the evaluation of public health interventions: a tutorial. International Journal of Epidemiology. 2017.</li>
+          <li>How to use directed acyclic graphs: guide for clinical researchers. The BMJ.</li>
+          <li>Reading and conducting instrumental variable studies, and the Mendelian randomization methods reviews that separate estimands from invalid instruments.</li>
+          <li>Validity diagnostics in a multi-database infliximab safety study. BMC Medical Research Methodology. 2024. Protocol and code are public; the patient tables are not.</li>
+        </ul>
+      </section>
+    </div>
+
+    <div id="panel-code" data-panel="code" hidden>
+      <p class="kicker">Source only</p>
+      <h1>Analysis code, without the data</h1>
+      <p class="lede">The fairness scripts read credentialed files from local paths. Those files are not in this site. The causal-methods script never reads a file. It draws rows with a random number generator.</p>
+      <div class="filetabs" role="tablist" aria-label="Source files">
+        <button type="button" data-file="causal_methods.py" aria-selected="true">Causal methods</button><button type="button" data-file="mimic_fairness.py" aria-selected="false">MIMIC fairness</button><button type="button" data-file="bold_fairness.py" aria-selected="false">BOLD fairness</button><button type="button" data-file="mimic_data_prep.py" aria-selected="false">MIMIC data prep</button><button type="button" data-file="heart_disease.py" aria-selected="false">Heart-disease lab</button>
+      </div>
+      <p class="dag-cap"><a id="codedown" href="code/causal_methods.py">Download this file</a></p>
+      <pre class="src" id="codeview"></pre>
+      <script type="text/plain" id="src-causal_methods.py">
+import numpy as np
+
+
+def _with_intercept(x):
+    x = np.asarray(x, dtype=float)
+    if x.ndim == 1:
+        x = x.reshape(-1, 1)
+    return np.column_stack([np.ones(len(x)), x])
+
+
+def _least_squares(x, y):
+    return np.linalg.lstsq(_with_intercept(x), np.asarray(y, dtype=float), rcond=None)[0]
+
+
+def _predict(coef, x):
+    return _with_intercept(x) @ coef
+
+
+def _propensity(x, treatment):
+    design = _with_intercept(x)
+    beta = np.zeros(design.shape[1])
+    y = np.asarray(treatment, dtype=float)
+    for _ in range(30):
+        eta = np.clip(design @ beta, -20, 20)
+        p = 1.0 / (1.0 + np.exp(-eta))
+        weight = np.clip(p * (1.0 - p), 1e-6, None)
+        working = eta + (y - p) / weight
+        scale = np.sqrt(weight)
+        beta = np.linalg.lstsq(design * scale[:, None], working * scale, rcond=None)[0]
+    eta = np.clip(design @ beta, -20, 20)
+    return np.clip(1.0 / (1.0 + np.exp(-eta)), 0.01, 0.99)
+
+
+def iptw_ate(x, treatment, outcome):
+    treatment = np.asarray(treatment, dtype=float)
+    outcome = np.asarray(outcome, dtype=float)
+    ps = _propensity(x, treatment)
+    treated = treatment / ps
+    control = (1.0 - treatment) / (1.0 - ps)
+    return float(np.sum(treated * outcome) / np.sum(treated) - np.sum(control * outcome) / np.sum(control))
+
+
+def aipw_ate(x, treatment, outcome):
+    treatment = np.asarray(treatment, dtype=float)
+    outcome = np.asarray(outcome, dtype=float)
+    x = np.asarray(x, dtype=float)
+    ps = _propensity(x, treatment)
+    treated = treatment == 1
+    mu1 = _predict(_least_squares(x[treated], outcome[treated]), x)
+    mu0 = _predict(_least_squares(x[~treated], outcome[~treated]), x)
+    score = mu1 - mu0
+    score += treatment * (outcome - mu1) / ps
+    score -= (1.0 - treatment) * (outcome - mu0) / (1.0 - ps)
+    return float(np.mean(score))
+
+
+def g_formula_ate(x, treatment, outcome):
+    treatment = np.asarray(treatment, dtype=float)
+    outcome = np.asarray(outcome, dtype=float)
+    x = np.asarray(x, dtype=float)
+    coef = _least_squares(np.column_stack([treatment, x]), outcome)
+    ones = np.ones(len(treatment))
+    zeros = np.zeros(len(treatment))
+    y1 = _predict(coef, np.column_stack([ones, x]))
+    y0 = _predict(coef, np.column_stack([zeros, x]))
+    return float(np.mean(y1 - y0))
+
+
+def two_period_g_formula(baseline, a0, later, a1, outcome):
+    baseline = np.asarray(baseline, dtype=float)
+    a0 = np.asarray(a0, dtype=float)
+    later = np.asarray(later, dtype=float)
+    a1 = np.asarray(a1, dtype=float)
+    outcome = np.asarray(outcome, dtype=float)
+    later_coef = _least_squares(np.column_stack([a0, baseline]), later)
+    outcome_coef = _least_squares(np.column_stack([a0, a1, later]), outcome)
+
+    def mean_under(value):
+        assigned = np.full(len(baseline), value)
+        later_cf = _predict(later_coef, np.column_stack([assigned, baseline]))
+        y_cf = _predict(outcome_coef, np.column_stack([assigned, assigned, later_cf]))
+        return float(np.mean(y_cf))
+
+    return mean_under(1.0) - mean_under(0.0)
+
+
+def two_stage_least_squares(instrument, treatment, outcome, covariates=None):
+    instrument = np.asarray(instrument, dtype=float).reshape(-1, 1)
+    treatment = np.asarray(treatment, dtype=float)
+    outcome = np.asarray(outcome, dtype=float)
+    if covariates is None:
+        first_design = instrument
+        second_tail = None
+    else:
+        covariates = np.asarray(covariates, dtype=float)
+        first_design = np.column_stack([instrument, covariates])
+        second_tail = covariates
+    fitted = _predict(_least_squares(first_design, treatment), first_design)
+    if second_tail is None:
+        second_design = fitted.reshape(-1, 1)
+    else:
+        second_design = np.column_stack([fitted, second_tail])
+    return float(_least_squares(second_design, outcome)[1])
+
+
+def wald_ratio(genotype, exposure, outcome):
+    genotype = np.asarray(genotype, dtype=float).reshape(-1, 1)
+    exposure_coef = _least_squares(genotype, exposure)[1]
+    outcome_coef = _least_squares(genotype, outcome)[1]
+    return float(outcome_coef / exposure_coef)
+
+
+def segmented_regression(time, outcome, interruption):
+    time = np.asarray(time, dtype=float)
+    outcome = np.asarray(outcome, dtype=float)
+    interruption = np.asarray(interruption, dtype=float)
+    start = time[interruption == 1][0]
+    since = (time - start) * interruption
+    design = np.column_stack([np.ones(len(time)), time, interruption, since])
+    coef, *_ = np.linalg.lstsq(design, outcome, rcond=None)
+    return {"level_change": float(coef[2]), "slope_change": float(coef[3])}
+
+
+def demo():
+    rng = np.random.default_rng(7)
+    n = 6000
+    covariates = rng.normal(size=(n, 2))
+    logits = -0.1 + 0.9 * covariates[:, 0] - 0.5 * covariates[:, 1]
+    propensity = 1.0 / (1.0 + np.exp(-logits))
+    treatment = rng.binomial(1, propensity)
+    outcome = 1.5 * treatment + 1.1 * covariates[:, 0] + rng.normal(size=n)
+    print("iptw", round(iptw_ate(covariates, treatment, outcome), 3))
+    print("aipw", round(aipw_ate(covariates, treatment, outcome), 3))
+    print("g_formula", round(g_formula_ate(covariates, treatment, outcome), 3))
+
+    baseline = rng.normal(size=n)
+    a0 = rng.binomial(1, 1.0 / (1.0 + np.exp(-0.4 * baseline)))
+    later = 0.6 * baseline - 0.8 * a0 + rng.normal(size=n)
+    a1 = rng.binomial(1, 1.0 / (1.0 + np.exp(-(0.3 * later + 0.5 * a0))))
+    y_time = 1.2 * a0 + 0.8 * a1 + 0.7 * later + rng.normal(size=n)
+    print("two_period_g", round(two_period_g_formula(baseline, a0, later, a1, y_time), 3))
+
+    confounder = rng.normal(size=n)
+    instrument = rng.binomial(1, 0.5, size=n)
+    treated = ( -0.2 + 1.1 * instrument + 0.35 * confounder + rng.normal(scale=0.25, size=n) > 0.5).astype(float)
+    y_iv = 2.0 * treated + 1.2 * confounder + rng.normal(size=n)
+    print("iv", round(two_stage_least_squares(instrument, treated, y_iv), 3))
+
+    genotype = rng.binomial(2, 0.3, size=n)
+    exposure = 0.4 * genotype + rng.normal(size=n)
+    y_mr = 1.7 * exposure + rng.normal(size=n)
+    print("wald", round(wald_ratio(genotype, exposure, y_mr), 3))
+
+    time = np.arange(80, dtype=float)
+    post = (time >= 40).astype(float)
+    series = 10 + 0.05 * time + 3.0 * post - 0.08 * (time - 40) * post
+    series += rng.normal(scale=0.4, size=80)
+    fit = segmented_regression(time, series, post)
+    print("its_level", round(fit["level_change"], 3))
+    print("its_slope", round(fit["slope_change"], 3))
+
+
+if __name__ == "__main__":
+    demo()
+</script><script type="text/plain" id="src-mimic_fairness.py">
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import ttest_ind
+import numpy as np
+from scipy import stats
+import os
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from xgboost import XGBRegressor
+
+pd.set_option('display.max_columns', None)
+DATA_PATH = "input/merged_data_with_labs_and_icu.csv"
+df = pd.read_csv(DATA_PATH)
+
+df.shape
+
+data_len = len(df)
+missing_pct = df.isnull().sum()/data_len
+missing_data = pd.DataFrame({'missing_count': df.isnull().sum(), 'missing_pct': missing_pct})
+
+len(missing_pct[missing_pct > 0.2])
+
+plt.figure(figsize=(12, 4))
+
+plt.subplot(1, 2, 1)
+sns.histplot(df['SaO2'], bins=30, kde=True, stat='density')
+sns.histplot(df['SpO2'], bins=30, kde=True, stat='density')
+plt.grid(False)
+plt.legend(['SaO2', 'SpO2'])
+plt.title('Distribution of O2 Levels (Full Range)')
+plt.subplot(1, 2, 2)
+sns.histplot(df['SaO2'], bins=30, kde=True, stat='density')
+sns.histplot(df['SpO2'], bins=30, kde=True, stat='density')
+plt.grid(False)
+plt.xlim(85, 100)
+plt.legend(['SaO2', 'SpO2'])
+plt.title('Distribution of O2 Levels (Narrow Range)')
+
+def add_skin_group_pandas(df, race_col='race'):
+    """
+    Categorizes race strings into 4 skin_groups using vectorized numpy logic.
+    Optimized for performance on large DataFrames.
+    """
+
+    race_series = df[race_col].astype(str).str.upper()
+
+    conditions = [
+        race_series.str.contains('WHITE|EUROPEAN|PORTUGUESE', na=False),
+        race_series.str.contains('HISPANIC|LATINO|ASIAN|PACIFIC|INDIAN|SOUTH AMERICAN', na=False),
+        race_series.str.contains('BLACK|AFRICAN', na=False)
+    ]
+
+    choices = ['Light', 'Medium', 'Dark']
+
+    df['skin_group'] = np.select(conditions, choices, default='Other/Unknown')
+
+    return df
+
+df = add_skin_group_pandas(df)
+df['SapO2_SpO2_diff'] = df['SaO2'] - df['SpO2']
+df['is_hypoxic'] = (df['SaO2'] < 88).astype(int)
+df['detected_hypoxia'] = (df['SpO2'] < 88).astype(int)
+fig = plt.figure(figsize=(3, 3))
+df['skin_group'].value_counts().plot(kind='pie', autopct='%1.1f%%', colors=['#ffffd2','#63b3ff','#99ff99','#ffcc99']    )
+
+plt.figure(figsize=(10, 5))
+
+sns.violinplot(
+    data=df,
+    x='SapO2_SpO2_diff',
+    y='skin_group',
+    hue='skin_group',
+    palette='PuBu',
+    inner='box',
+    bw_adjust=.5,
+    cut=0
+)
+plt.axvline(0, color='red', linestyle='--', linewidth=2, label='Zero Bias')
+
+plt.title('Oxygen Saturation Bias by Skin Group\n(Positive = Pulse Ox Underestimates | Negative = Pulse Ox Overestimates)', fontsize=14)
+plt.xlabel('Difference: SaO2 (Arterial) - SpO2 (Pulse Oximeter)', fontsize=12)
+plt.ylabel('Skin Tone Group', fontsize=12)
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+light_group = df[df['skin_group'] == 'Light']['SapO2_SpO2_diff']
+medium_group = df[df['skin_group'] == 'Medium']['SapO2_SpO2_diff']
+dark_group = df[df['skin_group'] == 'Dark']['SapO2_SpO2_diff']
+
+print("Dark vs Light:")
+t_stat, p_value = ttest_ind(light_group, dark_group, equal_var=False)
+print(f"T-statistic: {t_stat:.3f}, P-value: {p_value:.3f}")
+n1, n2 = len(dark_group), len(light_group)
+m1, m2 = np.mean(dark_group), np.mean(light_group)
+v1, v2 = np.var(dark_group, ddof=1), np.var(light_group, ddof=1)
+diff = m1 - m2
+se = np.sqrt(v1/n1 + v2/n2)
+df_welch = (v1/n1 + v2/n2)**2 / ((v1/n1)**2/(n1-1) + (v2/n2)**2/(n2-1))
+t_crit = stats.t.ppf(0.975, df_welch)
+ci_lower = diff - t_crit * se
+ci_upper = diff + t_crit * se
+print(f"Mean Difference: {diff:.3f}")
+print(f"95% CI: ({ci_lower:.3f}, {ci_upper:.3f})")
+
+print("\n")
+print("Dark vs Medium:")
+t_stat, p_value = ttest_ind(medium_group, dark_group, equal_var=False)
+print(f"T-statistic: {t_stat:.3f}, P-value: {p_value:.3f}")
+n1, n2 =len(dark_group), len(medium_group)
+m1, m2 = np.mean(dark_group), np.mean(medium_group)
+v1, v2 = np.var(dark_group, ddof=1), np.var(medium_group, ddof=1)
+diff = m1 - m2
+se = np.sqrt(v1/n1 + v2/n2)
+df_welch = (v1/n1 + v2/n2)**2 / ((v1/n1)**2/(n1-1) + (v2/n2)**2/(n2-1))
+t_crit = stats.t.ppf(0.975, df_welch)
+ci_lower = diff - t_crit * se
+ci_upper = diff + t_crit * se
+print(f"Mean Difference: {diff:.3f}")
+print(f"95% CI: ({ci_lower:.3f}, {ci_upper:.3f})")
+
+fig = plt.figure(figsize=(10, 6))
+for group in df['skin_group'].unique():
+    subset = df[df['skin_group'] == group]
+
+    fn = len(subset[(subset['is_hypoxic'] == 1) & (subset['detected_hypoxia'] == 0)])
+    tp = len(subset[(subset['is_hypoxic'] == 1) & (subset['detected_hypoxia'] == 1)])
+    fnr = fn / (fn + tp) if (fn + tp) > 0 else 0
+    plt.bar(group, fnr, label=f'{group} (FNR={fnr:.2f})',color=sns.color_palette('PuBu')[['Light', 'Medium', 'Dark', 'Other/Unknown'].index(group)])
+plt.title('False Negative Rate by Skin Group')
+plt.xlabel('Skin Group')
+plt.ylabel('False Negative Rate')
+plt.legend(loc='lower left')
+
+plt.figure(figsize=(10, 6))
+sns.regplot(data=df[df['skin_group']=='Light'], x='SpO2', y='SaO2', label='Light', scatter_kws={'alpha':0.1})
+sns.regplot(data=df[df['skin_group']=='Medium'], x='SpO2', y='SaO2', label='Medium', scatter_kws={'alpha':0.1})
+sns.regplot(data=df[df['skin_group']=='Dark'], x='SpO2', y='SaO2', label='Dark', scatter_kws={'alpha':0.1})
+sns.regplot(data=df[df['skin_group']=='Other/Unknown'], x='SpO2', y='SaO2', label='Other/Unknown', scatter_kws={'alpha':0.1})
+
+plt.plot([70, 100], [70, 100], 'k--', label='Perfect Calibration')
+plt.legend()
+plt.title('Calibration Check: SpO2 vs SaO2')
+
+threshold = 92
+df['favorable_outcome'] = (df['SpO2'] >= threshold).astype(int)
+
+selection_rates = df.groupby('skin_group')['favorable_outcome'].mean()
+
+unprivileged_rate = selection_rates['Dark']
+privileged_rate = selection_rates['Light']
+
+dir_ratio = unprivileged_rate / privileged_rate
+
+print(f"Selection Rate (Dark): {unprivileged_rate:.3f}")
+print(f"Selection Rate (Light): {privileged_rate:.3f}")
+print(f"Disparate Impact Ratio: {dir_ratio:.3f}")
+
+if dir_ratio < 0.8:
+    print("Result: Significant Disparate Impact detected (Below 0.8)")
+elif dir_ratio > 1.25:
+    print("Result: Significant Disparate Impact detected (Above 1.25)")
+else:
+    print("Result: Demographic Parity is generally met (within 0.8 - 1.25 range)")
+
+threshold = 92
+
+selection_rate_dark = (df[df['skin_group'] == 'Dark']['SpO2'] >= threshold).mean()
+selection_rate_light = (df[df['skin_group'] == 'Light']['SpO2'] >= threshold).mean()
+dir_ratio = selection_rate_dark / selection_rate_light
+
+prevalence_rate_dark = (df[df['skin_group'] == 'Dark']['SaO2'] >= threshold).mean()
+prevalence_rate_light = (df[df['skin_group'] == 'Light']['SaO2'] >= threshold).mean()
+prevalence_ratio = prevalence_rate_dark / prevalence_rate_light
+
+print(f"Disparate Impact Ratio (SpO2): {dir_ratio:.3f}")
+print(f"Actual Prevalence Ratio (SaO2): {prevalence_ratio:.3f}")
+print(f"Difference: {dir_ratio - prevalence_ratio:.3f}")
+
+mae = mean_absolute_error(df['SaO2'], df['SpO2'])
+rmse = mean_squared_error(df['SaO2'], df['SpO2']) ** 0.5
+print(f"Baseline MAE: {mae:.3f}")
+print(f"Baseline RMSE: {rmse:.3f}")
+
+target_col = "SaO2"
+group_col = "skin_group"
+
+candidate_features = ['SpO2', 'gender', 'anchor_age', 'cbc_hemoglobin',
+       'lab_carboxyhemoglobin', 'lab_creatinine', 'lab_hematocrit',
+       'lab_lactate', 'lab_methemoglobin', 'lab_pCO2', 'lab_pH', 'lab_pO2',
+       'icu_dbp_non_invasive', 'icu_heart_rate', 'icu_height',
+       'icu_mbp_non_invasive', 'icu_respiratory_rate', 'icu_sbp_non_invasive',
+       'icu_temperature', 'icu_weight']
+
+use_features = [c for c in candidate_features if c in df.columns]
+required_cols = list(dict.fromkeys(use_features + [target_col, group_col, "SpO2"]))
+work = df[required_cols].copy()
+
+numeric_cols = [c for c in use_features if c != group_col]
+for c in [target_col, "SpO2"] + numeric_cols:
+    if c in work.columns:
+        work[c] = pd.to_numeric(work[c], errors="coerce")
+
+work = work.dropna(subset=[target_col, group_col])
+work = work[(work[target_col] >= 50) & (work[target_col] <= 100)]
+
+print("Rows used:", len(work))
+print("Features used:", use_features)
+
+X = work[use_features].copy()
+y = work[target_col].copy()
+g = work[group_col].copy()
+spo2_for_eval = work["SpO2"].copy()
+
+X_train_raw, X_test_raw, y_train, y_test, g_train, g_test, spo2_train, spo2_test = train_test_split(
+    X, y, g, spo2_for_eval,
+    test_size=0.2,
+    random_state=42,
+    stratify=g
+)
+
+X_train = pd.get_dummies(X_train_raw, drop_first=False)
+X_test = pd.get_dummies(X_test_raw, drop_first=False)
+X_train, X_test = X_train.align(X_test, join="left", axis=1, fill_value=0)
+
+train_medians = X_train.median(numeric_only=True)
+X_train = X_train.fillna(train_medians).fillna(0)
+X_test = X_test.fillna(train_medians).fillna(0)
+
+lr_model = LinearRegression()
+lr_model.fit(X_train, y_train)
+pred_lr = lr_model.predict(X_test)
+
+xgb_model = XGBRegressor(max_depth=3, n_estimators=250, learning_rate=0.1, random_state=42, n_jobs=-1)
+xgb_model.fit(X_train, y_train)
+pred_xgb = xgb_model.predict(X_test)
+
+def reg_metrics(y_true, y_pred):
+    rmse = mean_squared_error(y_true, y_pred) ** 0.5
+    return {
+        "MAE": mean_absolute_error(y_true, y_pred),
+        "RMSE": rmse,
+        "R2": r2_score(y_true, y_pred)
+    }
+
+overall = pd.DataFrame([
+    {"model": "LR", **reg_metrics(y_test, pred_lr)},
+    {"model": "XGB", **reg_metrics(y_test, pred_xgb)}
+]).set_index("model")
+
+print("\nOverall performance")
+print(overall.round(4).to_string())
+
+def by_group_metrics(y_true, y_pred, groups, model_name):
+    out = []
+    tmp = pd.DataFrame({"y": y_true.values, "pred": y_pred, "group": groups.values})
+    for grp, d in tmp.groupby("group"):
+        if len(d) < 10:
+            continue
+        m = reg_metrics(d["y"], d["pred"])
+        out.append({"model": model_name, "group": grp, "n": len(d), **m})
+    return pd.DataFrame(out)
+
+gm = pd.concat([
+    by_group_metrics(y_test, pred_lr, g_test, "LR"),
+    by_group_metrics(y_test, pred_xgb, g_test, "XGB")
+], ignore_index=True)
+
+print("\nGroup-wise performance")
+print(gm.sort_values(["group", "model"]).round(4).to_string(index=False))
+
+threshold = 88.0
+true_hypox = y_test < threshold
+
+alert_spo2 = spo2_test < threshold
+alert_lr = pred_lr < threshold
+alert_xgb = pred_xgb < threshold
+
+def detection_report(true_event, alert, group_values, label):
+    rows = []
+    tmp = pd.DataFrame({"true": true_event.values, "alert": alert, "group": group_values.values})
+    for grp, d in tmp.groupby("group"):
+        n_true = int(d["true"].sum())
+        if n_true == 0:
+            continue
+        tp = int(((d["true"] == 1) & (d["alert"] == 1)).sum())
+        fn = int(((d["true"] == 1) & (d["alert"] == 0)).sum())
+        recall = tp / (tp + fn) if (tp + fn) > 0 else np.nan
+        rows.append({
+            "model": label,
+            "group": grp,
+            "true_events": n_true,
+            "TP": tp,
+            "FN": fn,
+            "Recall": recall
+        })
+    return pd.DataFrame(rows)
+
+hypoxemia_rep = pd.concat([
+    detection_report(true_hypox, alert_spo2, g_test, "SpO2 baseline"),
+    detection_report(true_hypox, alert_lr, g_test, "LR predicted SaO2"),
+    detection_report(true_hypox, alert_xgb, g_test, "XGB predicted SaO2")
+], ignore_index=True)
+
+print("\nHypoxemia recall by group")
+print(hypoxemia_rep.sort_values(["group", "model"]).round(4).to_string(index=False))
+
+eval_df = pd.DataFrame({
+    "group": g_test.to_numpy(),
+    "true_hypox": true_hypox.to_numpy(),
+    "alert_xgb": np.asarray(alert_xgb),
+    "y_true": y_test.to_numpy(),
+    "y_pred": np.asarray(pred_xgb)
+}).reset_index(drop=True)
+
+plt.figure(figsize=(10, 6))
+order = [g for g in ["Light", "Medium", "Dark", "Other/Unknown"] if g in eval_df["group"].unique()]
+palette = sns.color_palette("PuBu", n_colors=max(4, len(order)))
+
+for i, group in enumerate(order):
+    subset = eval_df[eval_df["group"] == group]
+    fn = ((subset["true_hypox"] == 1) & (subset["alert_xgb"] == 0)).sum()
+    tp = ((subset["true_hypox"] == 1) & (subset["alert_xgb"] == 1)).sum()
+    fnr = fn / (fn + tp) if (fn + tp) > 0 else 0
+    plt.bar(group, fnr, label=f"{group} (FNR={fnr:.2f})", color=palette[i])
+
+plt.title("False Negative Rate by Skin Group (XGB Predicted SaO2)")
+plt.xlabel("Skin Group")
+plt.ylabel("False Negative Rate")
+plt.legend(loc="lower left")
+plt.show()
+
+plt.figure(figsize=(10, 6))
+for group in ["Light",'Medium', "Dark", "Other/Unknown"]:
+    subset = eval_df[eval_df["group"] == group]
+    if len(subset) > 0:
+        sns.regplot(
+            x=subset["y_pred"],
+            y=subset["y_true"],
+            label=group,
+            ci=None,
+            scatter_kws={"alpha": 0.08, "s": 20},
+            line_kws={"linewidth": 2}
+        )
+
+plt.plot([70, 100], [70, 100], "k--", label="Perfect Calibration")
+plt.legend()
+plt.title("Calibration Check: XGB Predicted SaO2 vs Actual SaO2")
+plt.xlabel("Predicted SaO2")
+plt.ylabel("Actual SaO2")
+plt.show()
+
+xgb_importance = xgb_model.get_booster().get_score(importance_type="weight")
+importance_df = pd.DataFrame({
+    "feature": list(xgb_importance.keys()),
+    "importance": list(xgb_importance.values())
+})
+importance_df = importance_df.sort_values("importance", ascending=False)
+print("\nXGB Feature Importance (by weight)")
+print(importance_df.round(4).to_string(index=False))
+
+from xgboost import XGBRegressor
+from fairlearn.metrics import (
+    MetricFrame,
+    true_positive_rate,
+    false_positive_rate,
+    false_negative_rate,
+    selection_rate,
+)
+from fairlearn.reductions import GridSearch, BoundedGroupLoss, SquareLoss, AbsoluteLoss
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+
+hh_threshold = 88.0
+
+y_hypox_train = (y_train < hh_threshold).astype(int)
+y_hypox_test = (y_test < hh_threshold).astype(int)
+
+def theil_index_manual(y_true_binary, y_pred_binary):
+
+    b = np.asarray(y_pred_binary, dtype=float) - np.asarray(y_true_binary, dtype=float) + 1.0
+    b = np.clip(b, 1e-12, None)
+    mu = np.mean(b)
+    r = b / mu
+    return np.mean(r * np.log(r))
+
+param = {
+    "n_estimators": 250,
+    "max_depth": 3,
+    "learning_rate": 0.1,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "random_state": 42,
+    "n_jobs": -1
+}
+xgb_reg = XGBRegressor(
+    **param
+)
+xgb_reg.fit(X_train, y_train)
+pred_reg = xgb_reg.predict(X_test)
+alert_reg_hypox = (pred_reg < hh_threshold).astype(int)
+
+constraints_sq = BoundedGroupLoss(
+    loss=SquareLoss(min_val=50, max_val=100),
+    upper_bound=2.0,
+)
+mitigator_sq = GridSearch(
+    estimator=XGBRegressor(
+         **param
+    ),
+    constraints=constraints_sq,
+    grid_size=11,
+)
+mitigator_sq.fit(X_train, y_train, sensitive_features=g_train)
+pred_fair_sq = mitigator_sq.predict(X_test)
+alert_fair_sq = (pred_fair_sq < hh_threshold).astype(int)
+
+constraints_abs = BoundedGroupLoss(
+    loss=AbsoluteLoss(min_val=50, max_val=100),
+    upper_bound=2.0,
+)
+mitigator_abs = GridSearch(
+    estimator=XGBRegressor(
+       **param
+    ),
+    constraints=constraints_abs,
+    grid_size=11,
+)
+mitigator_abs.fit(X_train, y_train, sensitive_features=g_train)
+pred_fair_abs = mitigator_abs.predict(X_test)
+alert_fair_abs = (pred_fair_abs < hh_threshold).astype(int)
+
+models = {
+    "XGBRegressor (unmitigated)": (pred_reg, alert_reg_hypox),
+    "XGBRegressor + GridSearch(SquareLoss)": (pred_fair_sq, alert_fair_sq),
+    "XGBRegressor + GridSearch(AbsoluteLoss)": (pred_fair_abs, alert_fair_abs),
+}
+
+rows = []
+for name, (pred_regression, y_pred_alert) in models.items():
+    mf_tpr = MetricFrame(
+        metrics=true_positive_rate,
+        y_true=y_hypox_test,
+        y_pred=y_pred_alert,
+        sensitive_features=g_test,
+    )
+    mf_fpr = MetricFrame(
+        metrics=false_positive_rate,
+        y_true=y_hypox_test,
+        y_pred=y_pred_alert,
+        sensitive_features=g_test,
+    )
+    mf_fnr = MetricFrame(
+        metrics=false_negative_rate,
+        y_true=y_hypox_test,
+        y_pred=y_pred_alert,
+        sensitive_features=g_test,
+    )
+    mf_sel = MetricFrame(
+        metrics=selection_rate,
+        y_true=y_hypox_test,
+        y_pred=y_pred_alert,
+        sensitive_features=g_test,
+    )
+
+    by_group = pd.DataFrame({
+        "group": mf_tpr.by_group.index,
+        "TPR_recall": mf_tpr.by_group.values,
+        "FPR": mf_fpr.by_group.values,
+        "FNR": mf_fnr.by_group.values,
+        "SelectionRate": mf_sel.by_group.values,
+    })
+
+    mae = mean_absolute_error(y_test, pred_regression)
+    rmse = mean_squared_error(y_test, pred_regression) ** 0.5
+
+    by_group["MAE_overall"] = mae
+    by_group["RMSE_overall"] = rmse
+    by_group["model"] = name
+    rows.append(by_group)
+
+    eod = mf_tpr.difference()
+    aod = 0.5 * (mf_tpr.difference() + mf_fpr.difference())
+    theil = theil_index_manual(y_hypox_test, y_pred_alert)
+
+    print(f"\n{name}")
+    print("Equal Opportunity Difference:", round(eod, 4))
+    print("Average Odds Difference:", round(aod, 4))
+    print("Theil Index:", round(theil, 4))
+    print("Recall disparity (max-min):", round(mf_tpr.difference(), 4))
+    print("FNR disparity (max-min):", round(mf_fnr.difference(), 4))
+    print("MAE overall:", round(mae, 4), "| RMSE overall:", round(rmse, 4))
+
+fairlearn_compare = pd.concat(rows, ignore_index=True)
+display(
+    fairlearn_compare.sort_values(["model","group"]).reset_index(drop=True).round(4)
+)
+
+summary_rows = []
+for name, (pred_regression, y_pred_alert) in models.items():
+    mf_tpr = MetricFrame(
+        metrics=true_positive_rate,
+        y_true=y_hypox_test,
+        y_pred=y_pred_alert,
+        sensitive_features=g_test,
+    )
+    mf_fpr = MetricFrame(
+        metrics=false_positive_rate,
+        y_true=y_hypox_test,
+        y_pred=y_pred_alert,
+        sensitive_features=g_test,
+    )
+    summary_rows.append({
+        "model": name,
+        "EqualOpportunityDiff": mf_tpr.difference(),
+        "AverageOddsDiff": 0.5 * (mf_tpr.difference() + mf_fpr.difference()),
+        "TheilIndex": theil_index_manual(y_hypox_test, y_pred_alert),
+        "MAE": mean_absolute_error(y_test, pred_regression),
+        "RMSE": mean_squared_error(y_test, pred_regression) ** 0.5,
+    })
+
+summary_df = pd.DataFrame(summary_rows).round(4)
+print("\nModel-level fairness/accuracy summary")
+print(summary_df.to_string(index=False))
+</script><script type="text/plain" id="src-bold_fairness.py">
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import ttest_ind
+import numpy as np
+from scipy import stats
+import os
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from xgboost import XGBRegressor
+
+pd.set_option('display.max_columns', None)
+DATA_PATH = "physionet.org/files/blood-gas-oximetry/1.0/bold_dataset.csv"
+df = pd.read_csv(DATA_PATH)
+
+df.shape
+
+data_len = len(df)
+missing_pct = df.isnull().sum()/data_len
+missing_data = pd.DataFrame({'missing_count': df.isnull().sum(), 'missing_pct': missing_pct})
+
+len(missing_pct[missing_pct > 0.2])
+
+plt.figure(figsize=(12, 4))
+
+plt.subplot(1, 2, 1)
+sns.histplot(df['SaO2'], bins=30, kde=True, stat='density')
+sns.histplot(df['SpO2'], bins=30, kde=True, stat='density')
+plt.grid(False)
+plt.legend(['SaO2', 'SpO2'])
+plt.title('Distribution of O2 Levels (Full Range)')
+plt.subplot(1, 2, 2)
+sns.histplot(df['SaO2'], bins=30, kde=True, stat='density')
+sns.histplot(df['SpO2'], bins=30, kde=True, stat='density')
+plt.grid(False)
+plt.xlim(85, 100)
+plt.legend(['SaO2', 'SpO2'])
+plt.title('Distribution of O2 Levels (Narrow Range)')
+
+def apply_skin_tone_mapping(df, column_name='race'):
+
+    race_map = {
+        'White': 'Light',
+        'Black': 'Dark',
+        'Hispanic OR Latino': 'Medium',
+        'Asian': 'Medium',
+        'American Indian / Alaska Native': 'Medium',
+        'Native Hawaiian / Pacific Islander': 'Medium',
+        'Unknown': 'Other/Unknown',
+        'More Than One Race': 'Other/Unknown'
+    }
+
+    df['skin_group'] = df[column_name].map(race_map).fillna('Other/Unknown')
+    return df
+
+df = apply_skin_tone_mapping(df, 'race_ethnicity')
+df['skin_group'].value_counts()
+df['SapO2_SpO2_diff'] = df['SaO2'] - df['SpO2']
+df['is_hypoxic'] = (df['SaO2'] < 88).astype(int)
+df['detected_hypoxia'] = (df['SpO2'] < 88).astype(int)
+fig = plt.figure(figsize=(3, 3))
+df['skin_group'].value_counts().plot(kind='pie', autopct='%1.1f%%', colors=['#ffffd2','#63b3ff','#99ff99','#ffcc99']    )
+
+plt.figure(figsize=(10, 5))
+
+sns.violinplot(
+    data=df,
+    x='SapO2_SpO2_diff',
+    y='skin_group',
+    hue='skin_group',
+    palette='PuBu',
+    inner='box',
+    bw_adjust=.5,
+    cut=0
+)
+plt.axvline(0, color='red', linestyle='--', linewidth=2, label='Zero Bias')
+
+plt.title('Oxygen Saturation Bias by Skin Group\n(Positive = Pulse Ox Underestimates | Negative = Pulse Ox Overestimates)', fontsize=14)
+plt.xlabel('Difference: SaO2 (Arterial) - SpO2 (Pulse Oximeter)', fontsize=12)
+plt.ylabel('Skin Tone Group', fontsize=12)
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+light_group = df[df['skin_group'] == 'Light']['SapO2_SpO2_diff']
+medium_group = df[df['skin_group'] == 'Medium']['SapO2_SpO2_diff']
+dark_group = df[df['skin_group'] == 'Dark']['SapO2_SpO2_diff']
+
+print("Dark vs Light:")
+t_stat, p_value = ttest_ind(light_group, dark_group, equal_var=False)
+print(f"T-statistic: {t_stat:.3f}, P-value: {p_value:.3f}")
+n1, n2 = len(dark_group), len(light_group)
+m1, m2 = np.mean(dark_group), np.mean(light_group)
+v1, v2 = np.var(dark_group, ddof=1), np.var(light_group, ddof=1)
+diff = m1 - m2
+se = np.sqrt(v1/n1 + v2/n2)
+df_welch = (v1/n1 + v2/n2)**2 / ((v1/n1)**2/(n1-1) + (v2/n2)**2/(n2-1))
+t_crit = stats.t.ppf(0.975, df_welch)
+ci_lower = diff - t_crit * se
+ci_upper = diff + t_crit * se
+print(f"Mean Difference: {diff:.3f}")
+print(f"95% CI: ({ci_lower:.3f}, {ci_upper:.3f})")
+
+print("\n")
+print("Dark vs Medium:")
+t_stat, p_value = ttest_ind(medium_group, dark_group, equal_var=False)
+print(f"T-statistic: {t_stat:.3f}, P-value: {p_value:.3f}")
+n1, n2 =len(dark_group), len(medium_group)
+m1, m2 = np.mean(dark_group), np.mean(medium_group)
+v1, v2 = np.var(dark_group, ddof=1), np.var(medium_group, ddof=1)
+diff = m1 - m2
+se = np.sqrt(v1/n1 + v2/n2)
+df_welch = (v1/n1 + v2/n2)**2 / ((v1/n1)**2/(n1-1) + (v2/n2)**2/(n2-1))
+t_crit = stats.t.ppf(0.975, df_welch)
+ci_lower = diff - t_crit * se
+ci_upper = diff + t_crit * se
+print(f"Mean Difference: {diff:.3f}")
+print(f"95% CI: ({ci_lower:.3f}, {ci_upper:.3f})")
+
+fig = plt.figure(figsize=(10, 6))
+for group in df['skin_group'].unique():
+    subset = df[df['skin_group'] == group]
+
+    fn = len(subset[(subset['is_hypoxic'] == 1) & (subset['detected_hypoxia'] == 0)])
+    tp = len(subset[(subset['is_hypoxic'] == 1) & (subset['detected_hypoxia'] == 1)])
+    fnr = fn / (fn + tp) if (fn + tp) > 0 else 0
+    plt.bar(group, fnr, label=f'{group} (FNR={fnr:.2f})',color=sns.color_palette('PuBu')[['Light', 'Medium', 'Dark', 'Other/Unknown'].index(group)])
+plt.title('False Negative Rate by Skin Group')
+plt.xlabel('Skin Group')
+plt.ylabel('False Negative Rate')
+plt.legend(loc='lower left')
+
+plt.figure(figsize=(10, 6))
+sns.regplot(data=df[df['skin_group']=='Light'], x='SpO2', y='SaO2', label='Light', scatter_kws={'alpha':0.1})
+sns.regplot(data=df[df['skin_group']=='Medium'], x='SpO2', y='SaO2', label='Medium', scatter_kws={'alpha':0.1})
+sns.regplot(data=df[df['skin_group']=='Dark'], x='SpO2', y='SaO2', label='Dark', scatter_kws={'alpha':0.1})
+sns.regplot(data=df[df['skin_group']=='Other/Unknown'], x='SpO2', y='SaO2', label='Other/Unknown', scatter_kws={'alpha':0.1})
+plt.plot([70, 100], [70, 100], 'k--', label='Perfect Calibration')
+plt.legend()
+plt.title('Calibration Check: SpO2 vs SaO2')
+
+threshold = 92
+df['favorable_outcome'] = (df['SpO2'] >= threshold).astype(int)
+
+selection_rates = df.groupby('skin_group')['favorable_outcome'].mean()
+
+unprivileged_rate = selection_rates['Dark']
+privileged_rate = selection_rates['Light']
+
+dir_ratio = unprivileged_rate / privileged_rate
+
+print(f"Selection Rate (Dark): {unprivileged_rate:.3f}")
+print(f"Selection Rate (Light): {privileged_rate:.3f}")
+print(f"Disparate Impact Ratio: {dir_ratio:.3f}")
+
+if dir_ratio < 0.8:
+    print("Result: Significant Disparate Impact detected (Below 0.8)")
+elif dir_ratio > 1.25:
+    print("Result: Significant Disparate Impact detected (Above 1.25)")
+else:
+    print("Result: Demographic Parity is generally met (within 0.8 - 1.25 range)")
+
+threshold = 92
+
+selection_rate_dark = (df[df['skin_group'] == 'Dark']['SpO2'] >= threshold).mean()
+selection_rate_light = (df[df['skin_group'] == 'Light']['SpO2'] >= threshold).mean()
+dir_ratio = selection_rate_dark / selection_rate_light
+
+prevalence_rate_dark = (df[df['skin_group'] == 'Dark']['SaO2'] >= threshold).mean()
+prevalence_rate_light = (df[df['skin_group'] == 'Light']['SaO2'] >= threshold).mean()
+prevalence_ratio = prevalence_rate_dark / prevalence_rate_light
+
+print(f"Disparate Impact Ratio (SpO2): {dir_ratio:.3f}")
+print(f"Actual Prevalence Ratio (SaO2): {prevalence_ratio:.3f}")
+print(f"Difference: {dir_ratio - prevalence_ratio:.3f}")
+
+mae = mean_absolute_error(df['SaO2'], df['SpO2'])
+rmse = mean_squared_error(df['SaO2'], df['SpO2']) ** 0.5
+print(f"Baseline MAE: {mae:.3f}")
+print(f"Baseline RMSE: {rmse:.3f}")
+
+target_col = "SaO2"
+group_col = "skin_group"
+
+candidate_features = [
+    "SpO2", "delta_SpO2", "admission_age", "sex_female", "BMI_admission",
+    "vitals_heart_rate", "vitals_resp_rate", "vitals_mbp_ni", "vitals_sbp_ni", "vitals_dbp_ni",
+    "vitals_tempc", "cbc_hemoglobin", "cbc_hematocrit", "bmp_creatinine", "bmp_lactate",
+    "pH", "pCO2", "pO2", "Carboxyhemoglobin", "Methemoglobin"
+]
+
+use_features = [c for c in candidate_features if c in df.columns]
+required_cols = list(dict.fromkeys(use_features + [target_col, group_col, "SpO2"]))
+work = df[required_cols].copy()
+
+numeric_cols = [c for c in use_features if c != group_col]
+for c in [target_col, "SpO2"] + numeric_cols:
+    if c in work.columns:
+        work[c] = pd.to_numeric(work[c], errors="coerce")
+
+work = work.dropna(subset=[target_col, group_col])
+print("Rows used:", len(work))
+print("Features used:", use_features)
+
+X = work[use_features].copy()
+y = work[target_col].copy()
+g = work[group_col].copy()
+spo2_for_eval = work["SpO2"].copy()
+
+X_train_raw, X_test_raw, y_train, y_test, g_train, g_test, spo2_train, spo2_test = train_test_split(
+    X, y, g, spo2_for_eval,
+    test_size=0.2,
+    random_state=42,
+    stratify=g
+)
+
+X_train = pd.get_dummies(X_train_raw, drop_first=False)
+X_test = pd.get_dummies(X_test_raw, drop_first=False)
+X_train, X_test = X_train.align(X_test, join="left", axis=1, fill_value=0)
+
+train_medians = X_train.median(numeric_only=True)
+X_train = X_train.fillna(train_medians).fillna(0)
+X_test = X_test.fillna(train_medians).fillna(0)
+
+lr_model = LinearRegression()
+lr_model.fit(X_train, y_train)
+pred_lr = lr_model.predict(X_test)
+
+xgb_model = XGBRegressor(max_depth=3, n_estimators=100, learning_rate=0.1, random_state=42, n_jobs=-1)
+xgb_model.fit(X_train, y_train)
+pred_xgb = xgb_model.predict(X_test)
+
+def reg_metrics(y_true, y_pred):
+    rmse = mean_squared_error(y_true, y_pred) ** 0.5
+    return {
+        "MAE": mean_absolute_error(y_true, y_pred),
+        "RMSE": rmse,
+        "R2": r2_score(y_true, y_pred)
+    }
+
+overall = pd.DataFrame([
+    {"model": "LR", **reg_metrics(y_test, pred_lr)},
+    {"model": "XGB", **reg_metrics(y_test, pred_xgb)}
+]).set_index("model")
+
+print("\nOverall performance")
+print(overall.round(4).to_string())
+
+def by_group_metrics(y_true, y_pred, groups, model_name):
+    out = []
+    tmp = pd.DataFrame({"y": y_true.values, "pred": y_pred, "group": groups.values})
+    for grp, d in tmp.groupby("group"):
+        if len(d) < 10:
+            continue
+        m = reg_metrics(d["y"], d["pred"])
+        out.append({"model": model_name, "group": grp, "n": len(d), **m})
+    return pd.DataFrame(out)
+
+gm = pd.concat([
+    by_group_metrics(y_test, pred_lr, g_test, "LR"),
+    by_group_metrics(y_test, pred_xgb, g_test, "XGB")
+], ignore_index=True)
+
+print("\nGroup-wise performance")
+print(gm.sort_values(["group", "model"]).round(4).to_string(index=False))
+
+threshold = 88.0
+true_hypox = y_test < threshold
+
+alert_spo2 = spo2_test < threshold
+alert_lr = pred_lr < threshold
+alert_xgb = pred_xgb < threshold
+
+def detection_report(true_event, alert, group_values, label):
+    rows = []
+    tmp = pd.DataFrame({"true": true_event.values, "alert": alert, "group": group_values.values})
+    for grp, d in tmp.groupby("group"):
+        n_true = int(d["true"].sum())
+        if n_true == 0:
+            continue
+        tp = int(((d["true"] == 1) & (d["alert"] == 1)).sum())
+        fn = int(((d["true"] == 1) & (d["alert"] == 0)).sum())
+        recall = tp / (tp + fn) if (tp + fn) > 0 else np.nan
+        rows.append({
+            "model": label,
+            "group": grp,
+            "true_events": n_true,
+            "TP": tp,
+            "FN": fn,
+            "Recall": recall
+        })
+    return pd.DataFrame(rows)
+
+hypoxemia_rep = pd.concat([
+    detection_report(true_hypox, alert_spo2, g_test, "SpO2 baseline"),
+    detection_report(true_hypox, alert_lr, g_test, "LR predicted SaO2"),
+    detection_report(true_hypox, alert_xgb, g_test, "XGB predicted SaO2")
+], ignore_index=True)
+
+print("\nHypoxemia recall by group")
+print(hypoxemia_rep.sort_values(["group", "model"]).round(4).to_string(index=False))
+
+eval_df = pd.DataFrame({
+    "group": g_test.to_numpy(),
+    "true_hypox": true_hypox.to_numpy(),
+    "alert_xgb": np.asarray(alert_xgb),
+    "y_true": y_test.to_numpy(),
+    "y_pred": np.asarray(pred_xgb)
+}).reset_index(drop=True)
+
+plt.figure(figsize=(10, 6))
+order = [g for g in ["Light", "Medium", "Dark", "Other/Unknown"] if g in eval_df["group"].unique()]
+palette = sns.color_palette("PuBu", n_colors=max(4, len(order)))
+
+for i, group in enumerate(order):
+    subset = eval_df[eval_df["group"] == group]
+    fn = ((subset["true_hypox"] == 1) & (subset["alert_xgb"] == 0)).sum()
+    tp = ((subset["true_hypox"] == 1) & (subset["alert_xgb"] == 1)).sum()
+    fnr = fn / (fn + tp) if (fn + tp) > 0 else 0
+    plt.bar(group, fnr, label=f"{group} (FNR={fnr:.2f})", color=palette[i])
+
+plt.title("False Negative Rate by Skin Group (XGB Predicted SaO2)")
+plt.xlabel("Skin Group")
+plt.ylabel("False Negative Rate")
+plt.legend(loc="lower left")
+plt.show()
+
+plt.figure(figsize=(10, 6))
+for group in ["Light","Medium", "Dark", "Other/Unknown"]:
+    subset = eval_df[eval_df["group"] == group]
+    if len(subset) > 0:
+        sns.regplot(
+            x=subset["y_pred"],
+            y=subset["y_true"],
+            label=group,
+            ci=None,
+            scatter_kws={"alpha": 0.08, "s": 20},
+            line_kws={"linewidth": 2}
+        )
+
+plt.plot([70, 100], [70, 100], "k--", label="Perfect Calibration")
+plt.legend()
+plt.title("Calibration Check: XGB Predicted SaO2 vs Actual SaO2")
+plt.xlabel("Predicted SaO2")
+plt.ylabel("Actual SaO2")
+plt.show()
+
+xgb_importance = xgb_model.get_booster().get_score(importance_type="weight")
+importance_df = pd.DataFrame({
+    "feature": list(xgb_importance.keys()),
+    "importance": list(xgb_importance.values())
+})
+importance_df = importance_df.sort_values("importance", ascending=False)
+print("\nXGB Feature Importance (by weight)")
+print(importance_df.round(4).to_string(index=False))
+
+from xgboost import XGBRegressor
+from fairlearn.metrics import (
+    MetricFrame,
+    true_positive_rate,
+    false_positive_rate,
+    false_negative_rate,
+    selection_rate,
+)
+from fairlearn.reductions import GridSearch, BoundedGroupLoss, SquareLoss, AbsoluteLoss
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+
+hh_threshold = 88.0
+
+y_hypox_train = (y_train < hh_threshold).astype(int)
+y_hypox_test = (y_test < hh_threshold).astype(int)
+
+def theil_index_manual(y_true_binary, y_pred_binary):
+
+    b = np.asarray(y_pred_binary, dtype=float) - np.asarray(y_true_binary, dtype=float) + 1.0
+    b = np.clip(b, 1e-12, None)
+    mu = np.mean(b)
+    r = b / mu
+    return np.mean(r * np.log(r))
+
+param = {
+    "n_estimators": 250,
+    "max_depth": 3,
+    "learning_rate": 0.1,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "random_state": 42,
+    "n_jobs": -1
+}
+xgb_reg = XGBRegressor(
+    **param
+)
+xgb_reg.fit(X_train, y_train)
+pred_reg = xgb_reg.predict(X_test)
+alert_reg_hypox = (pred_reg < hh_threshold).astype(int)
+
+constraints_sq = BoundedGroupLoss(
+    loss=SquareLoss(min_val=50, max_val=100),
+    upper_bound=6.0,
+)
+mitigator_sq = GridSearch(
+    estimator=XGBRegressor(
+         **param
+    ),
+    constraints=constraints_sq,
+    grid_size=11,
+)
+mitigator_sq.fit(X_train, y_train, sensitive_features=g_train)
+pred_fair_sq = mitigator_sq.predict(X_test)
+alert_fair_sq = (pred_fair_sq < hh_threshold).astype(int)
+
+constraints_abs = BoundedGroupLoss(
+    loss=AbsoluteLoss(min_val=50, max_val=100),
+    upper_bound=2.0,
+)
+mitigator_abs = GridSearch(
+    estimator=XGBRegressor(
+       **param
+    ),
+    constraints=constraints_abs,
+    grid_size=11,
+)
+mitigator_abs.fit(X_train, y_train, sensitive_features=g_train)
+pred_fair_abs = mitigator_abs.predict(X_test)
+alert_fair_abs = (pred_fair_abs < hh_threshold).astype(int)
+
+models = {
+    "XGBRegressor (unmitigated)": (pred_reg, alert_reg_hypox),
+    "XGBRegressor + GridSearch(SquareLoss)": (pred_fair_sq, alert_fair_sq),
+    "XGBRegressor + GridSearch(AbsoluteLoss)": (pred_fair_abs, alert_fair_abs),
+}
+
+rows = []
+for name, (pred_regression, y_pred_alert) in models.items():
+    mf_tpr = MetricFrame(
+        metrics=true_positive_rate,
+        y_true=y_hypox_test,
+        y_pred=y_pred_alert,
+        sensitive_features=g_test,
+    )
+    mf_fpr = MetricFrame(
+        metrics=false_positive_rate,
+        y_true=y_hypox_test,
+        y_pred=y_pred_alert,
+        sensitive_features=g_test,
+    )
+    mf_fnr = MetricFrame(
+        metrics=false_negative_rate,
+        y_true=y_hypox_test,
+        y_pred=y_pred_alert,
+        sensitive_features=g_test,
+    )
+    mf_sel = MetricFrame(
+        metrics=selection_rate,
+        y_true=y_hypox_test,
+        y_pred=y_pred_alert,
+        sensitive_features=g_test,
+    )
+
+    by_group = pd.DataFrame({
+        "group": mf_tpr.by_group.index,
+        "TPR_recall": mf_tpr.by_group.values,
+        "FPR": mf_fpr.by_group.values,
+        "FNR": mf_fnr.by_group.values,
+        "SelectionRate": mf_sel.by_group.values,
+    })
+
+    mae = mean_absolute_error(y_test, pred_regression)
+    rmse = mean_squared_error(y_test, pred_regression) ** 0.5
+
+    by_group["MAE_overall"] = mae
+    by_group["RMSE_overall"] = rmse
+    by_group["model"] = name
+    rows.append(by_group)
+
+    eod = mf_tpr.difference()
+    aod = 0.5 * (mf_tpr.difference() + mf_fpr.difference())
+    theil = theil_index_manual(y_hypox_test, y_pred_alert)
+
+    print(f"\n{name}")
+    print("Equal Opportunity Difference:", round(eod, 4))
+    print("Average Odds Difference:", round(aod, 4))
+    print("Theil Index:", round(theil, 4))
+    print("Recall disparity (max-min):", round(mf_tpr.difference(), 4))
+    print("FNR disparity (max-min):", round(mf_fnr.difference(), 4))
+    print("MAE overall:", round(mae, 4), "| RMSE overall:", round(rmse, 4))
+
+fairlearn_compare = pd.concat(rows, ignore_index=True)
+display(
+    fairlearn_compare.sort_values(["model","group"]).reset_index(drop=True).round(4)
+)
+
+summary_rows = []
+for name, (pred_regression, y_pred_alert) in models.items():
+    mf_tpr = MetricFrame(
+        metrics=true_positive_rate,
+        y_true=y_hypox_test,
+        y_pred=y_pred_alert,
+        sensitive_features=g_test,
+    )
+    mf_fpr = MetricFrame(
+        metrics=false_positive_rate,
+        y_true=y_hypox_test,
+        y_pred=y_pred_alert,
+        sensitive_features=g_test,
+    )
+    summary_rows.append({
+        "model": name,
+        "EqualOpportunityDiff": mf_tpr.difference(),
+        "AverageOddsDiff": 0.5 * (mf_tpr.difference() + mf_fpr.difference()),
+        "TheilIndex": theil_index_manual(y_hypox_test, y_pred_alert),
+        "MAE": mean_absolute_error(y_test, pred_regression),
+        "RMSE": mean_squared_error(y_test, pred_regression) ** 0.5,
+    })
+
+summary_df = pd.DataFrame(summary_rows).round(4)
+print("\nModel-level fairness/accuracy summary")
+print(summary_df.to_string(index=False))
+</script><script type="text/plain" id="src-mimic_data_prep.py">
+import pandas as pd
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+from pyspark.sql.window import Window
+
+spark = (
+    SparkSession.builder
+    .appName("MIMIC-IV")
+    .master("local[*]")
+    .config("spark.sql.shuffle.partitions", "200")
+    .config("spark.driver.memory", "8g") \
+    .config("spark.executor.memory", "8g") \
+    .config("spark.sql.autoBroadcastJoinThreshold", "-1") \
+    .getOrCreate()
+)
+DATA_PATH = "physionet.org/files/mimiciv/3.1/"
+
+df_hosp_lab = (
+    spark.read
+    .option("header", "true")
+    .option("inferSchema", "false")
+    .option("multiLine", "false")
+    .csv(DATA_PATH + "hosp/labevents.csv.gz")
+)
+
+df_admissions = (
+    spark.read
+    .option("header", "true")
+    .option("inferSchema", "true")
+    .option("multiLine", "false")
+    .csv(DATA_PATH + "hosp/admissions.csv.gz")
+)
+
+df_patients = (
+    spark.read
+    .option("header", "true")
+    .option("inferSchema", "true")
+    .option("multiLine", "false")
+    .csv(DATA_PATH + "hosp/patients.csv.gz")
+)
+
+df_icu_char = (
+    spark.read
+    .option("header", "true")
+    .option("inferSchema", "false")
+    .option("multiLine", "false")
+    .csv(DATA_PATH + "icu/chartevents.csv.gz")
+)
+
+SaO2_id = 50817
+SpO2_id = 220277
+
+df_admissions = df_admissions.withColumn("admittime", F.to_timestamp("admittime")) \
+                             .withColumn("dischtime", F.to_timestamp("dischtime"))
+df_hosp_lab = df_hosp_lab.withColumn("charttime", F.to_timestamp("charttime"))
+df_icu_char = df_icu_char.withColumn("charttime", F.to_timestamp("charttime"))
+
+df_hosp_lab = df_hosp_lab.withColumn("itemid", df_hosp_lab["itemid"].cast("int"))
+df_icu_char = df_icu_char.withColumn("itemid", df_icu_char["itemid"].cast("int"))
+
+df_SaO2 = df_hosp_lab.filter((df_hosp_lab['itemid'] == SaO2_id)&(df_hosp_lab['valuenum'] >= 70)&(df_hosp_lab['valuenum'] <= 100))
+df_SpO2 = df_icu_char.filter((df_icu_char['itemid'] == SpO2_id)&(df_icu_char['valuenum'] >= 70)&(df_icu_char['valuenum'] <= 100))
+
+df_SaO2.cache()
+df_SpO2.cache()
+
+df_SaO2.count(),df_SpO2.count()
+
+df_SaO2 = df_SaO2.withColumn("join_date", F.to_date("charttime"))
+df_SpO2 = df_SpO2.withColumn("join_date", F.to_date("charttime"))
+
+sao2_df = df_SaO2.select(
+    "subject_id", "join_date",
+    F.col("charttime").alias("sao2_time"),
+    F.col("valuenum").alias("SaO2")
+)
+
+spo2_df = df_SpO2.select(
+    "subject_id", "join_date", "stay_id",
+    F.col("charttime").alias("spo2_time"),
+    F.col("valuenum").alias("SpO2")
+)
+
+time_window_seconds = 5 * 60
+
+oxygen_pairs = sao2_df.join(
+    spo2_df,
+    on=[
+        sao2_df.subject_id == spo2_df.subject_id,
+        sao2_df.join_date == spo2_df.join_date,
+
+        spo2_df.spo2_time >= sao2_df.sao2_time - F.expr(f"INTERVAL {time_window_seconds} SECONDS"),
+        spo2_df.spo2_time <= sao2_df.sao2_time + F.expr(f"INTERVAL {time_window_seconds} SECONDS")
+    ],
+    how="inner"
+).drop(spo2_df.subject_id).drop(spo2_df.join_date)
+
+df = oxygen_pairs.join(
+    df_patients,
+    on="subject_id"
+).join(
+    df_admissions,
+    on="subject_id"
+)
+
+df = df.filter(
+    (F.col("sao2_time") >= F.col("admittime")) &
+    (F.col("sao2_time") <= F.col("dischtime"))
+)
+
+df_pd = df.toPandas()
+df_pd.to_csv("input/merged_data.csv", index=False)
+df.count()
+
+df = (
+    spark.read
+    .option("header", "true")
+    .option("inferSchema", "true")
+    .csv("input/merged_data.csv")
+    .withColumn("subject_id", F.col("subject_id").cast("int"))
+    .withColumn("sao2_time", F.to_timestamp("sao2_time"))
+)
+
+lab_ids = {
+    "hemoglobin": [50811, 51222], "hematocrit": [51221],
+    "creatinine": [50912], "lactate": [50813],
+    "pH": [50820], "pCO2": [50818], "pO2": [50821],
+    "carboxyhemoglobin": [50804], "methemoglobin": [50814]
+}
+
+icu_ids = {
+    "heart_rate": [220045],
+    "respiratory_rate": [220210],
+    "sbp_non_invasive": [220179],
+    "dbp_non_invasive": [220180],
+    "mbp_non_invasive": [220181],
+    "temperature": [223762],
+    "weight": [224639, 226512],
+    "height": [226730]
+}
+
+all_itemids = [item for sublist in lab_ids.values() for item in sublist]
+all_icu_itemids = [item for sublist in icu_ids.values() for item in sublist]
+
+df_labs_filtered = df_hosp_lab.filter(F.col("itemid").cast("int").isin(all_itemids)) \
+    .select(
+        F.col("subject_id").cast("int"),
+        F.col("charttime").cast("timestamp").alias("lab_time"),
+        F.col("itemid").cast("int"),
+        F.col("valuenum").cast("float")
+    )
+
+df_icu_filtered = df_icu_char.filter(F.col("itemid").cast("int").isin(all_icu_itemids)) \
+    .select(
+        F.col("subject_id").cast("int"),
+        F.col("charttime").cast("timestamp").alias("icu_time"),
+        F.col("itemid").cast("int"),
+        F.col("valuenum").cast("float")
+    )
+
+def map_itemid_lab(id_col):
+    expr = F.when(id_col.isin(lab_ids["hemoglobin"]), "cbc_hemoglobin")
+    for label, ids in lab_ids.items():
+        if label != "hemoglobin":
+            expr = expr.when(id_col.isin(ids), f"lab_{label}")
+    return expr.otherwise("unknown")
+
+df_labs_pivoted = df_labs_filtered.withColumn("feature", map_itemid_lab(F.col("itemid"))) \
+    .groupBy("subject_id", "lab_time") \
+    .pivot("feature") \
+    .avg("valuenum")
+
+def map_itemid_icu(id_col):
+    expr = F.when(F.lit(False), "dummy")
+    for label, ids in icu_ids.items():
+        expr = expr.when(id_col.isin(ids), f"icu_{label}")
+    return expr.otherwise("unknown")
+
+df_icu_pivoted = df_icu_filtered.withColumn("feature", map_itemid_icu(F.col("itemid"))) \
+    .groupBy("subject_id", "icu_time") \
+    .pivot("feature") \
+    .avg("valuenum")
+
+from datetime import timedelta
+
+spark.conf.set("spark.sql.adaptive.enabled", "true")
+
+events_df = df.alias("e")
+
+subject_ids = events_df.select("subject_id").distinct()
+bounds = events_df.select(
+    F.min("sao2_time").alias("min_sao2"),
+    F.max("sao2_time").alias("max_sao2")
+).first()
+
+min_lab_time = bounds["min_sao2"] - timedelta(hours=24)
+max_lab_time = bounds["max_sao2"]
+
+labs_base = (
+    df_labs_pivoted
+    .withColumn("subject_id", F.col("subject_id").cast("int"))
+    .join(F.broadcast(subject_ids), on="subject_id", how="inner")
+    .filter((F.col("lab_time") >= F.lit(min_lab_time)) & (F.col("lab_time") <= F.lit(max_lab_time)))
+)
+labs_df = labs_base.alias("l")
+
+icu_base = (
+    df_icu_pivoted
+    .withColumn("subject_id", F.col("subject_id").cast("int"))
+    .join(F.broadcast(subject_ids), on="subject_id", how="inner")
+    .filter((F.col("icu_time") >= F.lit(min_lab_time)) & (F.col("icu_time") <= F.lit(max_lab_time)))
+)
+icu_df = icu_base.alias("i")
+
+lab_feature_cols = [c for c in labs_base.columns if c not in ["subject_id", "lab_time"]]
+
+icu_feature_cols = [c for c in icu_base.columns if c not in ["subject_id", "icu_time"]]
+
+joined = events_df.join(
+    labs_df,
+    on=[
+        F.col("e.subject_id") == F.col("l.subject_id"),
+        F.col("l.lab_time") <= F.col("e.sao2_time"),
+        F.col("l.lab_time") >= F.col("e.sao2_time") - F.expr("INTERVAL 24 HOURS")
+    ],
+    how="left"
+).select(
+    F.col("e.*"),
+    F.col("l.lab_time"),
+    *[F.col(f"l.{c}") for c in lab_feature_cols]
+)
+
+window_spec_lab = Window.partitionBy(F.col("subject_id"), F.col("sao2_time")).orderBy(F.col("lab_time").desc())
+
+joined_with_labs = (
+    joined
+    .withColumn("rn", F.row_number().over(window_spec_lab))
+    .filter(F.col("rn") == 1)
+    .drop("rn", "lab_time")
+)
+
+joined_with_labs_aliased = joined_with_labs.alias("jl")
+
+joined_with_icu = joined_with_labs_aliased.join(
+    icu_df,
+    on=[
+        F.col("jl.subject_id") == F.col("i.subject_id"),
+        F.col("i.icu_time") <= F.col("jl.sao2_time"),
+        F.col("i.icu_time") >= F.col("jl.sao2_time") - F.expr("INTERVAL 1 HOURS")
+    ],
+    how="left"
+).select(
+    F.col("jl.*"),
+    F.col("i.icu_time"),
+    *[F.col(f"i.{c}") for c in icu_feature_cols]
+)
+
+window_spec_icu = Window.partitionBy(F.col("subject_id"), F.col("sao2_time")).orderBy(F.col("icu_time").desc())
+
+df_final_spark = (
+    joined_with_icu
+    .withColumn("rn", F.row_number().over(window_spec_icu))
+    .filter(F.col("rn") == 1)
+    .drop("rn", "icu_time")
+)
+
+df_final_spark.write.mode("overwrite").parquet("input/merged_data_with_labs_and_icu.parquet")
+
+print("Final Dataset Columns:")
+print(f"Total columns: {len(df_final_spark.columns)}")
+print("\nLab Feature Columns:")
+lab_cols = [c for c in df_final_spark.columns if c.startswith("lab_") or c.startswith("cbc_")]
+for col in lab_cols:
+    print(f"  - {col}")
+
+print("\nICU Feature Columns:")
+icu_cols = [c for c in df_final_spark.columns if c.startswith("icu_")]
+for col in icu_cols:
+    print(f"  - {col}")
+
+print("\nOxygen Measurement Columns:")
+oxygen_cols = ["SaO2", "SpO2", "sao2_time", "spo2_time"]
+for col in oxygen_cols:
+    if col in df_final_spark.columns:
+        print(f"  - {col}")
+
+df_final = spark.read.parquet("input/merged_data_with_labs_and_icu.parquet").limit(5000).toPandas()
+print(f"\nFinal Dataset Shape: {df_final.shape}")
+</script><script type="text/plain" id="src-heart_disease.py">
+import pandas as pd
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+import seaborn as sns
+import sklearn
+from sklearn.model_selection import train_test_split,GridSearchCV
+from sklearn.linear_model import LogisticRegression
+import sklearn.metrics as metrics
+from sklearn.metrics import roc_auc_score
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.calibration import calibration_curve
+from sklearn.utils import resample
+from scipy.ndimage import uniform_filter1d
+
+import warnings
+warnings.filterwarnings('ignore')
+import kagglehub
+
+path = 'kaggle/input/heart-failure-prediction'
+
+print("Path to dataset files:", path)
+print("Pandas version:", pd.__version__)
+print("Numpy version:", np.__version__)
+print("Seaborn version:", sns.__version__)
+print("Scikit-learn version:", sklearn.__version__)
+print("KaggleHub version:", kagglehub.__version__)
+print("Matplotlib version:", matplotlib.__version__)
+
+df = pd.read_csv(path + "/heart.csv")
+
+print(df.shape)
+
+df.isnull().sum().sort_values(ascending=False)
+
+df.select_dtypes(include=['object']).describe().T
+
+df.select_dtypes(exclude=['object']).describe().T
+
+df.hist(figsize=(12,8))
+
+plt.figure(figsize=(12,7))
+
+i = 1
+for col in df.select_dtypes(include=['object']).columns:
+    plt.subplot(2, 3, i)
+    i+=1
+    df[col].value_counts().plot(kind='bar')
+    plt.xticks(rotation=0)
+    plt.xlabel(None)
+    plt.title(col)
+plt.show()
+
+categorical_cols = df.select_dtypes(include=['object']).columns
+
+for col in categorical_cols:
+    df[col] = df[col].astype('category').cat.codes
+sns.heatmap(df.corr(), cmap='coolwarm')
+
+X = df.drop('HeartDisease', axis=1)
+y = df['HeartDisease']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+lr = LogisticRegression(random_state=42)
+param_grid = {'C': [0.001, 0.01, 0.1, 1, 10, 100],
+              'penalty': [ 'l2', None]}
+grid_search = GridSearchCV(lr, param_grid, cv=5)
+grid_search.fit(X_train[:,0].reshape(-1, 1), y_train)
+print("Best parameters: ", grid_search.best_params_)
+
+lr_age = LogisticRegression(**grid_search.best_params_, random_state=42)
+lr_age.fit(X_train[:,0].reshape(-1, 1), y_train)
+
+y_pred = lr_age.predict(X_test[:,0].reshape(-1, 1))
+lr_age_auc = roc_auc_score(y_test, y_pred)
+print("AUC: ", lr_age_auc)
+
+lr = LogisticRegression(random_state=42)
+param_grid = {'C': [0.001, 0.01, 0.1, 1, 10, 100],
+              'penalty': [ 'l2', None]}
+grid_search = GridSearchCV(lr, param_grid, cv=5)
+grid_search.fit(X_train, y_train)
+print("Best parameters: ", grid_search.best_params_)
+
+lr = LogisticRegression(**grid_search.best_params_, random_state=42)
+lr.fit(X_train, y_train)
+
+y_pred = lr.predict(X_test)
+lr_all_auc = roc_auc_score(y_test, y_pred)
+print("AUC: ", lr_all_auc)
+
+rf = RandomForestClassifier(random_state=42)
+param_grid = {'n_estimators': [5, 10, 20, 50, 100],
+              'max_depth': [2, 5, 10, None],
+              'min_samples_split': [2, 5, 10],
+              'min_samples_leaf': [1, 2, 4]}
+
+grid_search = GridSearchCV(rf, param_grid, cv=5)
+grid_search.fit(X_train, y_train)
+print("Best parameters: ", grid_search.best_params_)
+
+rf = RandomForestClassifier(**grid_search.best_params_, random_state=42)
+rf.fit(X_train, y_train)
+
+y_pred = rf.predict(X_test)
+rf_auc = roc_auc_score(y_test, y_pred)
+print("AUC: ", rf_auc)
+
+gb = GradientBoostingClassifier(random_state=42)
+param_grid = {'n_estimators': [5, 10, 20, 50, 100],
+              'learning_rate': [0.01, 0.001, 0.1],
+              'max_depth': [2, 5, 10, None],
+              'min_samples_split': [2, 5, 10],
+              'min_samples_leaf': [1, 2, 4]}
+
+grid_search = GridSearchCV(gb, param_grid, cv=5)
+grid_search.fit(X_train, y_train)
+print("Best parameters: ", grid_search.best_params_)
+
+gb = GradientBoostingClassifier(**grid_search.best_params_, random_state=42)
+gb.fit(X_train, y_train)
+
+y_pred = gb.predict(X_test)
+gb_auc = roc_auc_score(y_test, y_pred)
+print("AUC: ", gb_auc)
+
+print("AUC of logistic regression with age only: ", lr_age_auc)
+print("AUC of logistic regression with all features: ", lr_all_auc)
+print("AUC of random forest: ", rf_auc)
+print("AUC of gradient boosting: ", gb_auc)
+
+feature_importance = pd.DataFrame({'feature': X.columns, 'importance': lr.coef_[0]})
+feature_importance = feature_importance.sort_values(by='importance', ascending=False)
+feature_importance
+
+figure, axes = plt.subplots(1, 4, figsize=(15, 5))
+for ax, model in zip(figure.axes, [lr_age, lr, rf, gb]):
+  if model == lr_age:
+    prob_true, prob_pred = calibration_curve(y_test, model.predict_proba(X_test[:,0].reshape(-1, 1))[:, 1], n_bins=10, strategy="quantile")
+  else:
+    prob_true, prob_pred = calibration_curve(y_test, model.predict_proba(X_test)[:, 1], n_bins=10, strategy="quantile")
+  ax.scatter(prob_pred, prob_true)
+  ax.plot([0, 1], [0,1], 'k--')
+  ax.set_xlabel('Predicted probabilities')
+  ax.set_ylabel('True probabilities')
+  ax.set_title(type(model).__name__)
+
+plt.tight_layout()
+plt.show()
+
+matrix_df = pd.DataFrame(columns=['Model','Precision', 'Recall', 'F1', 'AUC', 'Brier'])
+
+for model in [lr_age, lr, rf, gb]:
+    if model == lr_age:
+        y_pred = model.predict(X_test[:,0].reshape(-1, 1))
+        model_nm = type(model).__name__ + '_age'
+
+    else:
+        y_pred = model.predict(X_test)
+        model_nm = type(model).__name__
+    new_df = pd.DataFrame([[model_nm,
+                            metrics.precision_score(y_test, y_pred),
+                            metrics.recall_score(y_test, y_pred),
+                            metrics.f1_score(y_test, y_pred),
+                            metrics.roc_auc_score(y_test, y_pred),
+                            metrics.brier_score_loss(y_test, y_pred)]],
+                          columns=['Model','Precision', 'Recall', 'F1', 'AUC', 'Brier'])
+    matrix_df = pd.concat([matrix_df, new_df])
+
+matrix_df.set_index('Model')
+
+def UtilPerfBin(y, p, cut, costratio):
+    NB = np.mean((p >= cut) * (y == 1)) - (cut / (1 - cut)) * np.mean((p >= cut) * (y == 0))
+    SNB = NB / np.mean(y)
+    risksort = np.sort(p)
+    ecpts = pd.DataFrame(np.nan, index=range(len(risksort)), columns=range(3))
+    for i in range(len(risksort)):
+        ecpts.iloc[i, 0] = np.sum(p[y == 1] < risksort[i]) / np.sum(y == 1)
+        ecpts.iloc[i, 1] = np.sum(p[y == 0] >= risksort[i]) / np.sum(y == 0)
+        ecpts.iloc[i, 2] = (ecpts.iloc[i, 0] * np.mean(y) * (costratio if costratio > 1 else 1) + ecpts.iloc[i, 1] * (1 - np.mean(y)) * (1 if costratio > 1 else costratio))
+    EC = np.min(ecpts.iloc[:, 2])
+    ECthreshold = risksort[np.argmin(ecpts.iloc[:, 2])]
+    return pd.DataFrame([[NB, SNB, EC, ECthreshold]], columns=["Net benefit", "Standardized net benefit", "Expected cost", "Threshold for EC"])
+
+def net_benefit(y_true, probabilities, thresholds):
+    """Calculate the Net Benefit (NB) at each threshold."""
+    nb_values = []
+    for threshold in thresholds:
+        tp = np.sum((probabilities >= threshold) & (y_true == 1))
+        fp = np.sum((probabilities >= threshold) & (y_true == 0))
+        nb = (tp / len(y_true)) - (fp / len(y_true)) * (threshold / (1 - threshold))
+        nb_values.append(nb)
+
+    return np.array(nb_values)
+
+def ecplotv(y, p, ncostfp):
+    risksort = np.sort(p)
+    ec_res = pd.DataFrame(np.nan, index=[0, 1], columns=range(len(ncostfp)))
+    for i, cost_fp in enumerate(ncostfp):
+        ecpts = pd.DataFrame(np.nan, index=range(len(risksort)), columns=[0, 1, 2])
+
+        for j, threshold in enumerate(risksort):
+            fn_rate = np.sum(p[y == 1] < threshold) / np.sum(y == 1)
+            fp_rate = np.sum(p[y == 0] >= threshold) / np.sum(y == 0)
+            ec_value = (fn_rate * np.mean(y) * (1 - cost_fp) +
+                        fp_rate * (1 - np.mean(y)) * cost_fp)
+
+            ecpts.iloc[j, 0] = fn_rate
+            ecpts.iloc[j, 1] = fp_rate
+            ecpts.iloc[j, 2] = ec_value
+
+        ec_res.iloc[0, i] = ecpts.iloc[:, 2].min()
+        ec_res.iloc[1, i] = risksort[ecpts.iloc[:, 2].idxmin()]
+
+    return ec_res
+
+def plot_single_model_curves(ax_nb, ax_ec, y_test, y_prob, model_name):
+    thresholds = np.linspace(0, 1, 101)
+
+    nb_values = net_benefit(y_test, y_prob, thresholds)
+
+    nb_smoothed = uniform_filter1d(nb_values, size=5)
+
+    ncostfp = np.arange(1, 100) / 100
+    ecmodel = ecplotv(y = y_test, p = y_prob,
+                      ncostfp = ncostfp)
+
+    ax_nb.plot(thresholds, nb_values, label=model_name, lw=2)
+    ax_nb.plot(thresholds, nb_smoothed, label=f"{model_name} (Smoothed)", linestyle="--", lw=1)
+
+    x_vals = 1 - ncostfp
+    ax_ec.plot(x_vals, ecmodel.iloc[0, :], lw=2, label=model_name)
+
+fig, (ax_nb, ax_ec) = plt.subplots(1, 2, figsize=(18, 7))
+
+thresholds = np.linspace(0, 1, 101)
+mean_outcome = y_test.mean()
+ncostfp = np.arange(1, 100) / 100
+
+ax_nb.axhline(0, color='red', linestyle='-', lw=1, label='Treat None')
+
+nb_treat_all = mean_outcome - (1 - mean_outcome) * (thresholds / (1 - thresholds))
+
+nb_treat_all[thresholds == 1] = mean_outcome
+ax_nb.plot(thresholds, nb_treat_all, color='orange', linestyle='-', lw=1, label='Treat All')
+
+ecTA = ncostfp * (mean_outcome / (1 - mean_outcome))
+ecTN = (1 - ncostfp) * ((1 - mean_outcome) / mean_outcome)
+x_vals = 1 - ncostfp
+ax_ec.plot(x_vals, ecTA, color='orange', linewidth=1, label='Treat All')
+ax_ec.plot(x_vals, ecTN, color='red', linewidth=1, label='Treat None')
+
+for model in [lr_age, lr, rf, gb]:
+    if model == lr_age:
+        y_prob = model.predict_proba(X_test[:,0].reshape(-1, 1))[:, 1]
+        model_name = type(model).__name__ + '_age'
+    else:
+        y_prob = model.predict_proba(X_test)[:, 1]
+        model_name = type(model).__name__
+    plot_single_model_curves(ax_nb, ax_ec, y_test, y_prob, model_name)
+
+ax_nb.set_xlabel("Decision threshold")
+ax_nb.set_ylabel("Net Benefit")
+ax_nb.set_ylim(-0.05, 0.5)
+ax_nb.set_xlim(0, 1)
+ax_nb.legend(loc="lower left")
+ax_nb.set_title("Net Benefit Curve")
+ax_nb.grid(True, linestyle='--', alpha=0.6)
+
+ax_ec.set_xlabel("Normalized cost of false negative", fontsize=12, labelpad=10)
+ax_ec.set_ylabel("Expected cost", fontsize=12, labelpad=10)
+ax_ec.set_xlim(0, 1)
+ax_ec.set_ylim(0, 0.5)
+ax_ec.set_title("Expected Cost Curve")
+ax_ec.legend(loc="upper right")
+ax_ec.grid(True, linestyle='--', alpha=0.6)
+
+plt.tight_layout()
+plt.show()
+
+from sklearn.utils import resample
+
+n_iterations = 1000
+scores = []
+y_pred_proba = lr.predict_proba(X_test)[:, 1]
+
+for i in range(n_iterations):
+
+    y_test_resampled, y_pred_resampled = resample(y_test, y_pred_proba, replace=True, stratify=y_test)
+
+    score = roc_auc_score(y_test_resampled, y_pred_resampled)
+    scores.append(score)
+
+lower = np.percentile(scores, 2.5)
+upper = np.percentile(scores, 97.5)
+
+print(f"AUC: {np.mean(scores):.3f} \n95% CI: ({lower:.3f} - {upper:.3f})")
+</script>
+    </div>
   </div>
 </main>
 <footer>
-  <div class="wrap">Aggregate results for discussion and teaching. Not a medical device evaluation. Patient-level healthcare data is intentionally absent.</div>
+  <div class="wrap">Fairness results, a separate causal-methods note, and the analysis code. Not a medical device evaluation. Patient-level healthcare data is intentionally absent.</div>
 </footer>
 <script>
 function bars(id, rows) {
@@ -638,6 +2481,48 @@ function bars(id, rows) {
 }
 bars("mimic-bars", [["Dark", 6, 44], ["Light", 5, 48], ["Medium", 3, 35], ["Other", 8, 44]]);
 bars("bold-bars", [["Dark", 23, 77], ["Light", 24, 83], ["Medium", 39, 79], ["Other", 21, 82]]);
+
+const tabNames = ["results", "causal", "code"];
+function showTab(name) {
+  if (!tabNames.includes(name)) name = "results";
+  document.querySelectorAll("[data-panel]").forEach((panel) => {
+    panel.hidden = panel.dataset.panel !== name;
+  });
+  document.querySelectorAll(".tabs [data-tab]").forEach((button) => {
+    button.setAttribute("aria-selected", button.dataset.tab === name ? "true" : "false");
+  });
+  const mast = document.getElementById("results-mast");
+  if (mast) mast.hidden = name !== "results";
+}
+function showFile(name) {
+  document.querySelectorAll("[data-file]").forEach((button) => {
+    button.setAttribute("aria-selected", button.dataset.file === name ? "true" : "false");
+  });
+  const node = document.getElementById("src-" + name);
+  const view = document.getElementById("codeview");
+  if (view && node) view.textContent = node.textContent.replace(/^\n/, "");
+  const link = document.getElementById("codedown");
+  if (link) {
+    link.href = "code/" + name;
+    link.textContent = "Download " + name;
+  }
+}
+document.querySelectorAll(".tabs [data-tab]").forEach((button) => {
+  button.addEventListener("click", () => {
+    showTab(button.dataset.tab);
+    history.replaceState(null, "", "#" + button.dataset.tab);
+  });
+});
+document.querySelectorAll("[data-file]").forEach((button) => {
+  button.addEventListener("click", () => showFile(button.dataset.file));
+});
+const opening = location.hash.replace("#", "");
+showTab(tabNames.includes(opening) ? opening : "results");
+showFile("causal_methods.py");
+window.addEventListener("hashchange", () => {
+  const id = location.hash.replace("#", "");
+  if (tabNames.includes(id)) showTab(id);
+});
 </script>
 </body>
 </html>

@@ -8,14 +8,13 @@ Open the designed briefing at the site root (`index.html`) once GitHub Pages is 
 
 ## The question
 
-Pulse oximeters estimate arterial oxygen saturation (SaO2) from a light signal on the finger (SpO2). If that estimate sits too high, a low arterial saturation can be missed. That miss is hidden hypoxemia. The project asks four questions, on two datasets:
+Pulse oximeters estimate arterial oxygen saturation (SaO2) from a light signal on the finger (SpO2). If that estimate sits too high, a low arterial saturation can be missed. That miss is hidden hypoxemia. The project asks three questions, on two datasets:
 
 1. Is SpO2 less accurate for darker skin groups, and do those groups miss more hypoxemia?
 2. Can a model that combines SpO2 with labs and vital signs recover SaO2 well enough to catch more of those events?
 3. Do Fairlearn group-loss constraints shrink the remaining gap between skin groups?
-4. Which part of that gap can be read as a property of the device, and which part still mixes illness, who gets a blood gas, and a race label standing in for pigment?
 
-Skin group is a coarse proxy built from recorded race or ethnicity, used in place of a measured pigment. The causal section draws that distinction as a graph and says what the printed tests identify.
+Skin group is a coarse proxy built from recorded race or ethnicity, used in place of a measured pigment. Causal methods in healthcare are a separate tab on the site. They are not estimated from these cohorts.
 
 ## How the numbers were produced
 
@@ -308,153 +307,14 @@ Two facts sit side by side. The section 2 XGBoost (100 trees, no subsampling) de
 
 The notebook’s closing comment says mitigation improved some fairness metrics at an accuracy cost. The printed tables support the accuracy cost. They do not support an improvement in equal opportunity or average odds. On both datasets the unconstrained model in this cell has the smallest equal-opportunity difference and the lowest MAE.
 
-The Fairlearn cell is also a narrow slice of the fairness question. Its unconstrained MIMIC model already has recalls packed between 0.448 and 0.477, so the gap it fails to close is about three points. The section 2 detector, the one that actually raises recall, spreads further. That comparison is in the next section, calculated from the printed recalls rather than from a new fit.
-
-## 4. Causal analysis in healthcare
-
-No new model was fit for this section. The credentialed tables are not in this repository. Every rate below is either copied from the notebooks or arithmetic on those printed rates. The graphs are the assumptions, made explicit, that turn a skin-group table into a claim about a device.
-
-### Two questions the Welch test currently answers as one
-
-The Dark-minus-Light differences (−1.058 points on MIMIC, −0.630 on BOLD) are differences in conditional means of SaO2 − SpO2. They answer a descriptive question: in these paired rows, the recorded Dark group sits further toward over-reading than the recorded Light group.
-
-A device question is different. It asks how SpO2 would move if skin pigment changed and arterial saturation, hemoglobin, and perfusion stayed as they were. Those two questions coincide only when recorded race behaves like an intervention on pigment. In these cohorts it does not. Race is recorded, not assigned. The people in the Dark and Light rows differ in illness, in labs, and in the fact of having an arterial gas drawn within five minutes of a pulse-ox reading.
-
-The same gap shows up in the safe-reading check. Demographic parity of SpO2 ≥ 92 holds (ratios 1.007 and 1.015). The arterial safe-rate ratio is lower (0.946 on MIMIC, 0.995 on BOLD). The device ratio sits above the arterial ratio by 0.061 and 0.020. That excess is the descriptive signature of over-reading. It is still a mixture of pigment, the SaO2 distribution, and who enters the file.
-
-### The measurement graph
-
-Solid arrows are the causal directions assumed here. They are a reading of the physiology and of the sampling scheme, not edges estimated from the tables.
-
-```mermaid
-flowchart LR
-  struct["Structural factors"] --> race["Recorded race"]
-  struct --> sev["Illness severity"]
-  race --> pigment["Skin pigment"]
-  pigment --> spo2["SpO2"]
-  sev --> sao2["SaO2"]
-  sao2 --> spo2
-  hgb["Hemoglobin, dyshemoglobins, perfusion"] --> spo2
-  sao2 --> hh["Hidden hypoxemia"]
-  spo2 --> hh
-```
-
-How to read the paths:
-
-| Path | Role | Status in the Welch contrast |
-| --- | --- | --- |
-| Recorded race → skin pigment → SpO2 | Optical path. This is the device question. Pigment is unmeasured; race is the proxy. | Open, and mixed with the other open paths |
-| Structural factors → illness severity → SaO2 → SpO2 | Back door. Groups can differ in how low saturation sits. Pulse-oximeter error itself depends on the saturation level, so a sicker group can show a different SaO2 − SpO2 even at the same pigment. | Open. The notebooks do not stratify bias by SaO2 |
-| Hemoglobin, dyshemoglobins, perfusion → SpO2 | Optical confounders and, for hemoglobin, also part of oxygen content | Open. These columns exist in the modeling table and are not used in the bias test |
-| Structural factors → recorded race, and structural factors → severity | Why ignorability fails for a race contrast | Open by construction |
-
-Hidden hypoxemia is a descendant of both SaO2 and SpO2. Conditioning on it, or training a detector only inside it, answers a different question from the size of the measurement error.
-
-### Selection into the paired cohort
-
-MIMIC keeps a row when an arterial gas and a charted SpO2 fall within five minutes, inside the admission. BOLD is already a blood-gas cohort. Drawing an arterial gas is a clinical decision. Severity pushes clinicians to draw one. So does a pulse-ox reading that looks worse than the patient, and so do care patterns that differ by recorded race. The analysis conditions on that common effect.
-
-```mermaid
-flowchart TD
-  race["Recorded race"] --> care["Care patterns and perceived need"]
-  sev["Illness severity"] --> care
-  spo2["SpO2, as displayed"] --> care
-  care --> sample["Row is in this cohort"]
-  sev --> sao2["SaO2"]
-  sample --> observed["Observed bias and recall"]
-  sao2 --> observed
-```
-
-`sample` is a collider. Conditioning on it opens a path between race and severity that is a property of who was sampled. The 32,751 pairs, and the 30,454 modeling rows, are that selected set. The report does not observe the saturations that never received a blood gas, so it cannot reweight this path. The honest statement is that every number in sections 1–3 is a number inside the paired sample.
-
-### What would identify the device path
-
-For the arrow pigment → SpO2, holding the physiology the probe is trying to report:
-
-- Compare SpO2 across groups inside slices of SaO2. SaO2 is the state the device claims to measure. Stratifying on it blocks the back door that runs through a different saturation distribution. It leaves race as a bundle of pigment, perfusion, device, and hospital.
-- Hold hemoglobin and the dyshemoglobins when the question is pigment at a fixed blood color. Hemoglobin also sits on the oxygen-content path, so this adjustment is for a measurement contrast, not for a contrast in oxygen delivery.
-- Leave SpO2 on the outcome side of a bias regression. It is the reading under study.
-- Leave the hidden-hypoxemia label out of the adjustment set. It is computed from SaO2 and SpO2.
-- Leave pO2 out of a measurement-error model. pO2 is taken in the same blood gas as SaO2 and moves with it. Putting it on the right-hand side of a bias regression partials out the physiology and can look like a device correction.
-
-This repository cannot compute the stratified contrast. The patient-level file is credentialed and is not here. Until that contrast exists, −1.06 and −0.63 stay descriptive gaps.
-
-### The prediction model, as a graph
-
-Section 2 predicts SaO2. Arterial pO2 is the most-used split on both cohorts (weight 291 on MIMIC, 237 on BOLD). pH or hemoglobin is next.
-
-```mermaid
-flowchart LR
-  gas["Gas exchange"] --> po2["Arterial pO2"]
-  gas --> sao2["SaO2"]
-  hgb["Hemoglobin"] --> sao2
-  hgb --> spo2["SpO2"]
-  pigment["Skin pigment"] --> spo2
-  sao2 --> spo2
-  po2 -.-> model["Model features"]
-  spo2 -.-> model
-  hgb -.-> model
-  model -.-> sao2hat["Predicted SaO2"]
-```
-
-Solid arrows are physiology. Dashed arrows are the fit. pO2 and SaO2 are both effects of gas exchange, and they are measured on the same draw. A model that leans on pO2 is reconstructing saturation from the blood gas, which is why R² can reach 0.89 on BOLD and why that gain is a weak claim about a finger probe. Pigment affects the probe. It does not appear in the feature list, except as the group used later for metrics. Gender, which the MIMIC fit never splits on, is a recorded attribute in the same sense: available, and unused by the trees.
-
-A bedside correction would have to be drawn on the dashed arrows that remain after pO2, pH, and the other same-draw labs are removed. That specification is commented in the notebooks and is not the source of the metrics in section 2.
-
-### Fairness criteria are different causal targets
-
-The printed metrics line up with different interventions. Equalizing one of them does not equalize the others. Gaps in the first block are copied from the notebooks. Gaps in the second block are max recall minus min recall on the section 2 tables, at three decimals.
-
-| Criterion | What is being set equal | MIMIC | BOLD |
-| --- | --- | --- | --- |
-| Demographic parity of SpO2 ≥ 92 | Share of reassuring pulse-ox readings | Dark/Light 1.007 | Dark/Light 1.015 |
-| Arterial base rate | Share with SaO2 ≥ 92 | Dark/Light 0.946 | Dark/Light 0.995 |
-| Device ratio minus arterial ratio | How far parity of the device sits from parity of the blood gas | +0.061 | +0.020 |
-| Mean bias | E[SaO2 − SpO2 \| group] | Dark − Light = −1.058 | Dark − Light = −0.630 |
-| Equal opportunity, Fairlearn unconstrained | Max recall minus min recall, that cell’s own fit | 0.0284 | 0.0744 |
-| Equal opportunity, absolute-loss search | Same, after the constraint | 0.0416 | 0.1786 |
-| Average odds, unconstrained → absolute loss | Recall gap averaged with the false-positive gap | 0.0273 → 0.0269 | 0.0384 → 0.0900 |
-
-| Section 2 detector, computed from printed recalls | MIMIC | BOLD |
-| --- | --- | --- |
-| Device recall, max − min across four groups | 0.077 − 0.032 = 0.045 | 0.393 − 0.214 = 0.179 |
-| Device, Light minus Dark | 0.049 − 0.056 = −0.007 | 0.237 − 0.230 = 0.007 |
-| XGBoost recall, max − min | 0.481 − 0.351 = 0.130 | 0.831 − 0.771 = 0.060 |
-| XGBoost, Light minus Dark | 0.481 − 0.444 = 0.037 | 0.831 − 0.771 = 0.060 |
-| Recall lift, XGBoost minus device, Dark | 0.444 − 0.056 = 0.388 | 0.771 − 0.230 = 0.541 |
-| Recall lift, Light | 0.481 − 0.049 = 0.432 | 0.831 − 0.237 = 0.594 |
-| Recall lift, Medium | 0.351 − 0.032 = 0.319 | 0.786 − 0.393 = 0.393 |
-| Recall lift, Other/Unknown | 0.437 − 0.077 = 0.360 | 0.821 − 0.214 = 0.607 |
-
-Read as a set, the tables say more than any one parity ratio:
-
-- The device’s Dark–Light recall gap is about a percentage point or less. Detection is poor in both groups, so equal opportunity is nearly automatic. On MIMIC the device finds 6 of 108 Dark-group hypoxemias and 40 of 820 Light-group hypoxemias.
-- The section 2 XGBoost raises every group and widens the spread. On MIMIC the floor is Medium (lift 0.319, recall 0.351), not Dark. On BOLD the floor of the XGBoost recalls is Dark, and the Light–Dark gap grows from 0.007 to 0.060. BOLD’s all-group device gap of 0.179 is the 28-event Medium and Other cells and should not be quoted as a stable disparity.
-- Fairlearn’s unconstrained MIMIC gap of 0.0284 describes a different fit, whose recalls sit near one half in every group. Comparing 0.0284 with the section 2 gap of 0.130 treats two trainings as one model.
-- The loss constraint then increases equal opportunity difference on both cohorts. Average odds improves by 0.0014 on MIMIC under absolute loss and worsens on BOLD. A regression-loss bound has no term for the optical path, and it has no term for a different SaO2 base rate. MIMIC’s arterial safe-rate ratio of 0.946 says the base rates already differ. Punishing group loss can spend accuracy to chase a gap that is partly that base rate.
-
-Counterfactual fairness would ask whether the alert stays the same under an intervention on pigment, with severity held. Path-specific fairness would go one step further and allow paths that run through true illness while blocking the path that runs through the probe. Neither estimand was computed. `BoundedGroupLoss` is not a stand-in for either one. Calibration by group was plotted in the notebooks and was not printed as a numeric slope or intercept, so this page cannot score calibration fairness.
-
-### Assumptions, shared with the vaccine appendix
-
-Appendix B uses the same three conditions for the Salk trial. Applied here:
-
-| | Consent, then randomize | These paired oximetry cohorts |
-| --- | --- | --- |
-| Consistency | One assigned vaccine, no interference across children | One probe on one finger. The condition fails if ward, device brand, or protocol differs by race and the label is standing in for that bundle |
-| Positivity | A consenting child can receive either arm | Light rows are 65% of the MIMIC test set and 76% of BOLD. Medium hypoxemia counts are 94 and 28. Several group-by-threshold cells are too thin for a stable contrast |
-| Ignorability | Assignment does not depend on risk, inside the consenting group | Recorded race is not assigned. No adjustment set was fit for the bias test. Back doors through severity, hemoglobin, perfusion, and selection stay open |
-
-The trial can block those doors by randomization after consent. This analysis has no comparable intervention. The product is a bounded description of two paired cohorts, plus a graph that says which door a later stratified analysis would have to close.
-
 ## What the two cohorts agree on
 
-- SpO2 over-reads more in the Dark group than in the Light group. The shift is about 1.1 points on the MIMIC pairing and 0.6 points on BOLD. Both figures are differences in means inside a paired sample. They become a device effect of pigment only after the back doors in section 4 are closed, and those doors were left open.
+- SpO2 over-reads more in the Dark group than in the Light group. The shift is about 1.1 points on the MIMIC pairing and 0.6 points on BOLD.
 - A disparate-impact check at SpO2 ≥ 92 passes the 0.80–1.25 band on both, while the arterial safe-rate ratio is lower. The device looks more even than the blood gas. The excess of the device ratio over the arterial ratio is +0.061 on MIMIC and +0.020 on BOLD.
 - Linear regression is a weak hypoxemia detector. On BOLD it is worse than SpO2 itself.
 - An XGBoost SaO2 model can raise detection a lot: Dark-group recall from 6% to 44% on MIMIC, and from 23% to 77% on BOLD, under the section 2 specification. The same model widens equal opportunity relative to the device: MIMIC’s four-group recall spread goes from 0.045 to 0.130, with Medium at the floor, and BOLD’s Light–Dark recall gap goes from 0.007 to 0.060.
 - Arterial blood gas, especially pO2, dominates the fit. That limits any claim that the same gain would appear from SpO2 and routine vitals alone.
-- Fairlearn group-loss search, as configured, did not reduce the recall gap and did cost a little accuracy. The constraint equalizes a regression penalty. It does not block the optical path, and it is not the same training as the section 2 detector whose recall spread is 0.130 on MIMIC.
+- Fairlearn group-loss search, as configured, did not reduce the recall gap and did cost a little accuracy. It is not the same training as the section 2 detector, whose four-group recall spread is 0.130 on MIMIC.
 
 ## What they do not agree on
 
@@ -529,14 +389,13 @@ Giving the 1954 polio vaccine to a large group of children and then counting cas
 
 Assigning vaccine by parental permission is not randomization. Parents who consent can differ in exposure, schooling, and trust in medicine. Those differences are exactly the kind that break ignorability, because they can change polio risk and the chance of being vaccinated.
 
-The workable alternative is to ask permission to participate, and only then randomize consenting children to vaccine or control. That order is what makes ignorability plausible. Section 4 uses the same three conditions on the oximetry cohorts, where no randomization plays that role.
+The workable alternative is to ask permission to participate, and only then randomize consenting children to vaccine or control.
 
 ## Limits
 
-- Race and ethnicity are proxies for skin pigment. They misclassify people, and the two datasets do not use the same map. The causal graph treats pigment as unobserved. The Welch gaps are not effects of an intervention on pigment.
-- The paired sample is conditioned on a blood gas having been drawn. That conditions on a collider of severity, the displayed SpO2, and care patterns.
-- One train-test split. No confidence intervals on the fairness metrics. Medium-group and BOLD hypoxemia counts are small. Positivity for a fully adjusted group contrast is thin in those cells.
-- Group calibration was plotted in the notebooks and not printed as a slope, so calibration fairness is unscored here. Section 4’s equal-opportunity spreads for the section 2 detector are arithmetic on rounded recalls.
+- Race and ethnicity are proxies for skin pigment. They misclassify people, and the two datasets do not use the same map.
+- One train-test split. No confidence intervals on the fairness metrics. Medium-group and BOLD hypoxemia counts are small.
+- Group calibration was plotted in the notebooks and not printed as a slope, so calibration fairness is unscored here. The section 2 equal-opportunity spreads are arithmetic on rounded recalls.
 - Fairness constraints optimize regression loss. The reported gaps are for a thresholded alert. Those are different tasks.
 - On BOLD, section 2 and section 3 are different XGBoost settings. They must not be read as “the good model, then the mitigated version of that same model.”
 - Blood-gas features, above all pO2, drive the fit.
